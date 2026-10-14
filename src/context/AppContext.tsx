@@ -21,8 +21,9 @@ import {
   initialSubtopics,
   initialTopics,
   initialTravelInfo,
+  defaultQuickAccessItems,
 } from '../data/initialData';
-import { db, isFirebaseConfigured, auth } from '../lib/firebase';
+import { db, isFirebaseConfigured, auth, cleanForFirestore } from '../lib/firebase';
 import { useAuth } from './AuthContext';
 import {
   doc,
