@@ -115,6 +115,18 @@ export interface TravelAccommodationInfo {
   }[];
 }
 
+export interface QuickAccessItem {
+  id: string;
+  title: string;
+  desc: string;
+  targetType: 'tab' | 'url';
+  targetValue: string;
+  iconName: string;
+  colorTheme: string;
+  customCount?: string;
+  displayOrder?: number;
+}
+
 export interface PortalSettings {
   activePhase: EventPhase;
   contingentName: string;
@@ -125,6 +137,16 @@ export interface PortalSettings {
     enabled: boolean;
     text: string;
   };
+  navLabels?: Record<string, string>;
+  sectionTitles?: {
+    infographicsTitle?: string;
+    infographicsSubtitle?: string;
+    announcementsTitle?: string;
+    announcementsSubtitle?: string;
+    allNoticesLabel?: string;
+    viewFullGalleryLabel?: string;
+  };
+  quickAccessItems?: QuickAccessItem[];
 }
 
 export interface UserProfile {

@@ -8,7 +8,67 @@ import {
   Topic,
   Subtopic,
   TravelAccommodationInfo,
+  QuickAccessItem,
 } from '../types';
+
+export const defaultQuickAccessItems: QuickAccessItem[] = [
+  {
+    id: 'announcements',
+    title: 'Announcements',
+    desc: 'Urgent notices, memos & roll calls',
+    targetType: 'tab',
+    targetValue: 'announcements',
+    iconName: 'Bell',
+    colorTheme: 'amber',
+  },
+  {
+    id: 'events',
+    title: 'Featured Events',
+    desc: 'Duo, Teater, Zapin, Band & Dakwah',
+    targetType: 'tab',
+    targetValue: 'events',
+    iconName: 'Sparkles',
+    colorTheme: 'blue',
+  },
+  {
+    id: 'infographics',
+    title: 'Posters & Maps',
+    desc: 'Venue maps, grids & guidelines',
+    targetType: 'tab',
+    targetValue: 'infographics',
+    iconName: 'Image',
+    colorTheme: 'indigo',
+  },
+  {
+    id: 'schedule',
+    title: 'Chronological Timeline',
+    desc: 'Day-to-day slots & stage rehearsals',
+    targetType: 'tab',
+    targetValue: 'schedule',
+    iconName: 'Calendar',
+    colorTheme: 'emerald',
+  },
+  {
+    id: 'travel',
+    title: 'Travel & Accommodation',
+    desc: 'Bus departure, hostels & key contacts',
+    targetType: 'tab',
+    targetValue: 'travel',
+    iconName: 'Bus',
+    colorTheme: 'violet',
+    customCount: 'Hostel C/D',
+  },
+  {
+    id: 'documents',
+    title: 'Documents & Downloads',
+    desc: 'SOAR handbook, forms & riders',
+    targetType: 'tab',
+    targetValue: 'documents',
+    iconName: 'FileText',
+    colorTheme: 'slate',
+    customCount: 'Official',
+  },
+];
 
 export const initialSettings: PortalSettings = {
   activePhase: 'FINAL / DURING EVENT',
@@ -20,6 +80,7 @@ export const initialSettings: PortalSettings = {
     enabled: true,
     text: 'All participants must report to Main Foyer for contingent briefing at 08:30 AM.',
   },
+  quickAccessItems: defaultQuickAccessItems,
 };
 
 export const initialTopics: Topic[] = [

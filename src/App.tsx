@@ -18,10 +18,12 @@ import { TopicSection } from './components/topics/TopicSection';
 import { ScheduleList } from './components/schedule/ScheduleList';
 import { TravelAccommodation } from './components/travel/TravelAccommodation';
 import { DocumentList } from './components/documents/DocumentList';
+import { InlineEdit } from './components/common/InlineEdit';
 import { ChevronRight } from 'lucide-react';
 
 const MainContent: React.FC = () => {
-  const { activeTab, setActiveTab } = useApp();
+  const { isAdminMode } = useAuth();
+  const { activeTab, setActiveTab, settings, updateSettings } = useApp();
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50/50">
@@ -38,6 +40,71 @@ const MainContent: React.FC = () => {
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 pb-24 md:pb-12">
         {activeTab === 'home' && (
           <div className="space-y-10">
+            {/* Primary Hero Section: Visual Guides & Infographics Showcase */}
+            <section className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                    <InlineEdit
+                      value={settings.sectionTitles?.infographicsTitle || 'Infographics & Venue Maps'}
+                      onSave={(val) =>
+                        updateSettings({
+                          sectionTitles: {
+                            ...settings.sectionTitles,
+                            infographicsTitle: val,
+                          },
+                        })
+                      }
+                      as="span"
+                    />
+                  </h2>
+                  <div className="text-xs text-slate-500">
+                    <InlineEdit
+                      value={settings.sectionTitles?.infographicsSubtitle || 'Venue wayfinding, stage specifications and emergency hotlines'}
+                      onSave={(val) =>
+                        updateSettings({
+                          sectionTitles: {
+                            ...settings.sectionTitles,
+                            infographicsSubtitle: val,
+                          },
+                        })
+                      }
+                      as="p"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('infographics');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>{settings.sectionTitles?.viewFullGalleryLabel || 'View Full Gallery'}</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                  {isAdminMode && (
+                    <InlineEdit
+                      value={settings.sectionTitles?.viewFullGalleryLabel || 'View Full Gallery'}
+                      onSave={(val) =>
+                        updateSettings({
+                          sectionTitles: {
+                            ...settings.sectionTitles,
+                            viewFullGalleryLabel: val,
+                          },
+                        })
+                      }
+                      onlyIcon
+                    />
+                  )}
+                </div>
+              </div>
+
+              <InfographicGallery showHeader={false} />
+            </section>
+
             {/* Quick Access Grid */}
             <QuickAccess />
 
@@ -46,94 +113,66 @@ const MainContent: React.FC = () => {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                    Official Contingent Notices
+                    <InlineEdit
+                      value={settings.sectionTitles?.announcementsTitle || 'Official Contingent Notices'}
+                      onSave={(val) =>
+                        updateSettings({
+                          sectionTitles: {
+                            ...settings.sectionTitles,
+                            announcementsTitle: val,
+                          },
+                        })
+                      }
+                      as="span"
+                    />
                   </h2>
-                  <p className="text-xs text-slate-500">
-                    Latest memos, technical call-ups and urgent announcements
-                  </p>
+                  <div className="text-xs text-slate-500">
+                    <InlineEdit
+                      value={settings.sectionTitles?.announcementsSubtitle || 'Latest memos, technical call-ups and urgent announcements'}
+                      onSave={(val) =>
+                        updateSettings({
+                          sectionTitles: {
+                            ...settings.sectionTitles,
+                            announcementsSubtitle: val,
+                          },
+                        })
+                      }
+                      as="p"
+                    />
+                  </div>
                 </div>
-                <button
-                  onClick={() => {
-                    setActiveTab('announcements');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                >
-                  <span>All Notices</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('announcements');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>{settings.sectionTitles?.allNoticesLabel || 'All Notices'}</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                  {isAdminMode && (
+                    <InlineEdit
+                      value={settings.sectionTitles?.allNoticesLabel || 'All Notices'}
+                      onSave={(val) =>
+                        updateSettings({
+                          sectionTitles: {
+                            ...settings.sectionTitles,
+                            allNoticesLabel: val,
+                          },
+                        })
+                      }
+                      onlyIcon
+                    />
+                  )}
+                </div>
               </div>
 
               <AnnouncementList limit={3} showHeader={false} />
             </section>
 
-            {/* Featured Competition Events */}
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                    Featured Contingent Events
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    Symphonic Duo, Teater Islamik, Zapin, Band & Dakwah
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setActiveTab('events');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                >
-                  <span>All Events</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <EventList />
-            </section>
-
-            {/* Visual Guides & Infographics Showcase */}
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                    Infographics & Venue Maps
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    Venue wayfinding, stage specifications and emergency hotlines
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setActiveTab('infographics');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                >
-                  <span>View Full Gallery</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <InfographicGallery />
-            </section>
-
-            {/* Dynamic Topics & Briefings Accordion */}
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                    Topics & Operational Guidelines
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    Welfare, dress code, daily roll call, and competition rubrics
-                  </p>
-                </div>
-              </div>
-
-              <TopicSection />
-            </section>
           </div>
         )}
 

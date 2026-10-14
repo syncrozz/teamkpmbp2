@@ -20,7 +20,7 @@ import {
 import { AdminLoginModal } from '../admin/AdminLoginModal';
 
 export const BottomNav: React.FC = () => {
-  const { activeTab, setActiveTab } = useApp();
+  const { activeTab, setActiveTab, settings } = useApp();
   const { isAdminMode, exitAdminMode } = useAuth();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -32,10 +32,10 @@ export const BottomNav: React.FC = () => {
   };
 
   const navItems = [
-    { id: 'home', label: 'Home', icon: Home },
-    { id: 'announcements', label: 'Notices', icon: Bell },
-    { id: 'events', label: 'Events', icon: Sparkles },
-    { id: 'infographics', label: 'Posters', icon: ImageIcon },
+    { id: 'home', label: settings.navLabels?.['home'] || 'Home', icon: Home },
+    { id: 'announcements', label: settings.navLabels?.['announcements'] || 'Notices', icon: Bell },
+    { id: 'events', label: settings.navLabels?.['events'] || 'Events', icon: Sparkles },
+    { id: 'infographics', label: settings.navLabels?.['infographics'] || 'Posters', icon: ImageIcon },
   ];
 
   return (
@@ -116,7 +116,7 @@ export const BottomNav: React.FC = () => {
                     <Calendar className="w-4 h-4" />
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-medium">Full Event Schedule</p>
+                    <p className="text-sm font-medium">{settings.navLabels?.['schedule'] || 'Full Event Schedule'}</p>
                     <p className="text-xs text-slate-500">Timeline & Stage Slots</p>
                   </div>
                 </div>
@@ -134,7 +134,7 @@ export const BottomNav: React.FC = () => {
                     <Bus className="w-4 h-4" />
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-medium">Travel & Accommodation</p>
+                    <p className="text-sm font-medium">{settings.navLabels?.['travel'] || 'Travel & Accommodation'}</p>
                     <p className="text-xs text-slate-500">Buses, Hostels & Rooming</p>
                   </div>
                 </div>
@@ -152,7 +152,7 @@ export const BottomNav: React.FC = () => {
                     <FileText className="w-4 h-4" />
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-medium">Official Documents</p>
+                    <p className="text-sm font-medium">{settings.navLabels?.['documents'] || 'Official Documents'}</p>
                     <p className="text-xs text-slate-500">Rulebooks & Consent Forms</p>
                   </div>
                 </div>

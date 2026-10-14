@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { DocumentItem } from '../../types';
@@ -14,6 +14,9 @@ import {
   FileSpreadsheet,
   X,
   AlertCircle,
+  Upload,
+  Link as LinkIcon,
+  CheckCircle,
 } from 'lucide-react';
 
 export const DocumentList: React.FC = () => {
@@ -34,6 +37,42 @@ export const DocumentList: React.FC = () => {
   const [newType, setNewType] = useState<'pdf' | 'doc' | 'sheet' | 'link'>('pdf');
   const [newSize, setNewSize] = useState('1.5 MB');
   const [newEventId, setNewEventId] = useState('');
+  const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Auto extract title
+    const cleanTitle = file.name
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[-_]/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+    setNewTitle(cleanTitle);
+
+    // Auto calculate size
+    const sizeMb = file.size / (1024 * 1024);
+    setNewSize(sizeMb >= 1 ? `${sizeMb.toFixed(1)} MB` : `${Math.round(file.size / 1024)} KB`);
+
+    // Auto detect type
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (ext === 'xlsx' || ext === 'xls' || ext === 'csv') {
+      setNewType('sheet');
+    } else if (ext === 'doc' || ext === 'docx') {
+      setNewType('doc');
+    } else {
+      setNewType('pdf');
+    }
+
+    // Read as Data URL
+    const reader = new FileReader();
+    reader.onload = () => {
+      setNewUrl(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +80,7 @@ export const DocumentList: React.FC = () => {
 
     await addDocument({
       title: newTitle.trim(),
-      description: newDesc.trim(),
+      description: newDesc.trim() || 'Dokumen rasmi kontinjen KPMBP.',
       fileUrl: newUrl.trim() || '#',
       fileType: newType,
       fileSize: newSize.trim(),
@@ -80,6 +119,12 @@ export const DocumentList: React.FC = () => {
 
   return (
     <div className="space-y-5">
+      {noticeMessage && (
+        <div className="fixed top-4 right-4 z-50 bg-slate-900 text-white text-xs px-4 py-2.5 rounded-xl shadow-lg border border-slate-700 animate-in fade-in">
+          {noticeMessage}
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
@@ -93,7 +138,7 @@ export const DocumentList: React.FC = () => {
         {isAdminMode && (
           <button
             onClick={() => setIsAdding(true)}
-            className="min-h-[36px] px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 self-start transition-colors shadow-xs"
+            className="min-h-[36px] px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 self-start transition-colors shadow-xs cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Document Record</span>
@@ -105,16 +150,38 @@ export const DocumentList: React.FC = () => {
       {isAdminMode && isAdding && (
         <form
           onSubmit={handleCreate}
-          className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3"
+          className="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-4 shadow-xs"
         >
           <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-            <span className="text-xs font-bold text-slate-900">Add Official Document</span>
+            <span className="text-xs font-bold text-slate-900">Tambah Dokumen Rasmi Kontinjen</span>
             <button
               type="button"
               onClick={() => setIsAdding(false)}
-              className="text-slate-400 hover:text-slate-600"
+              className="text-slate-400 hover:text-slate-600 cursor-pointer"
             >
               <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Quick File Upload Trigger */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-slate-700">
+              Pilih Fail dari Peranti (Pilihan Pantas)
+            </label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,application/pdf"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full py-3 px-4 border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50/40 hover:bg-blue-50/70 rounded-xl text-xs font-semibold text-blue-700 flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            >
+              <Upload className="w-4 h-4" />
+              <span>{newUrl.startsWith('data:') ? '✓ Fail Telah Dipilih (Ketik untuk ganti)' : 'Ketik untuk Muat Naik Fail PDF / Word / Excel'}</span>
             </button>
           </div>
 
@@ -152,9 +219,9 @@ export const DocumentList: React.FC = () => {
               </label>
               <input
                 type="text"
-                value={newUrl}
+                value={newUrl.startsWith('data:') ? '[Fail Peranti Telah Dilampirkan]' : newUrl}
                 onChange={(e) => setNewUrl(e.target.value)}
-                placeholder="https://drive.google.com/... or file path"
+                placeholder="https://drive.google.com/..."
                 className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900"
               />
             </div>
@@ -191,13 +258,13 @@ export const DocumentList: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsAdding(false)}
-              className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900 rounded-lg"
+              className="px-3.5 py-1.5 text-xs text-slate-600 hover:text-slate-900 rounded-lg cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm"
+              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xs cursor-pointer"
             >
               Save Document
             </button>
@@ -273,16 +340,18 @@ export const DocumentList: React.FC = () => {
             <div className="flex flex-col sm:flex-row items-center gap-1 shrink-0 pt-0.5">
               <a
                 href={item.fileUrl}
-                target="_blank"
+                download={item.title}
+                target={item.fileUrl.startsWith('data:') ? undefined : '_blank'}
                 rel="noreferrer"
                 onClick={(e) => {
                   if (item.fileUrl === '#') {
                     e.preventDefault();
-                    alert(`Official file "${item.title}" will be accessible once finalized by secretariat.`);
+                    setNoticeMessage(`Dokumen rasmi "${item.title}" akan dimuat naik selepas disahkan urus setia.`);
+                    setTimeout(() => setNoticeMessage(null), 3000);
                   }
                 }}
-                className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors"
-                title="Download or open document"
+                className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                title="Buka atau muat turun dokumen"
               >
                 {item.fileType === 'link' ? (
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -299,7 +368,7 @@ export const DocumentList: React.FC = () => {
                         status: item.status === 'published' ? 'draft' : 'published',
                       })
                     }
-                    className="p-2 text-slate-400 hover:text-slate-700 rounded-lg"
+                    className="p-2 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
                     title={item.status === 'published' ? 'Hide document' : 'Publish document'}
                   >
                     {item.status === 'published' ? (
@@ -314,7 +383,7 @@ export const DocumentList: React.FC = () => {
                         deleteDocument(item.id);
                       }
                     }}
-                    className="p-2 text-slate-400 hover:text-rose-600 rounded-lg"
+                    className="p-2 text-slate-400 hover:text-rose-600 rounded-lg cursor-pointer"
                     title="Delete document"
                   >
                     <Trash2 className="w-3.5 h-3.5" />

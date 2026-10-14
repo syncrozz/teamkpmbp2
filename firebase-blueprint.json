@@ -9,7 +9,9 @@
         "contingentName": { "type": "string" },
         "eventName": { "type": "string" },
         "tagline": { "type": "string" },
-        "lastUpdated": { "type": "string" }
+        "lastUpdated": { "type": "string" },
+        "navLabels": { "type": "object" },
+        "sectionTitles": { "type": "object" }
       },
       "required": ["contingentName", "eventName"]
     },

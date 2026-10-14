@@ -12,6 +12,7 @@ interface InlineEditProps {
   required?: boolean;
   as?: 'h1' | 'h2' | 'h3' | 'h4' | 'p' | 'span' | 'div';
   placeholder?: string;
+  onlyIcon?: boolean;
 }
 
 export const InlineEdit: React.FC<InlineEditProps> = ({
@@ -24,6 +25,7 @@ export const InlineEdit: React.FC<InlineEditProps> = ({
   required = true,
   as: Component = 'span',
   placeholder = 'Click to edit...',
+  onlyIcon = false,
 }) => {
   const { isAdminMode } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
@@ -110,6 +112,7 @@ export const InlineEdit: React.FC<InlineEditProps> = ({
 
   // If not admin mode or not editing, render standard element with optional pencil
   if (!isAdminMode) {
+    if (onlyIcon) return null;
     return <Component className={className}>{value || placeholder}</Component>;
   }
 
@@ -179,6 +182,19 @@ export const InlineEdit: React.FC<InlineEditProps> = ({
           <p className="text-xs text-rose-600 mt-1 font-medium">{error}</p>
         )}
       </div>
+    );
+  }
+
+  if (onlyIcon) {
+    return (
+      <button
+        type="button"
+        onClick={handleStartEdit}
+        title={label ? `Ubah ${label}` : 'Ubah teks'}
+        className={`opacity-75 hover:opacity-100 min-h-[28px] min-w-[28px] p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-all shrink-0 inline-flex items-center justify-center cursor-pointer ${className}`}
+      >
+        <Pencil className="w-3.5 h-3.5" />
+      </button>
     );
   }
 

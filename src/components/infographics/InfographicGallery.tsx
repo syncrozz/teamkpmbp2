@@ -5,7 +5,6 @@ import { Infographic } from '../../types';
 import { InlineEdit } from '../common/InlineEdit';
 import {
   Upload,
-  Plus,
   Trash2,
   Eye,
   EyeOff,
@@ -14,16 +13,17 @@ import {
   Tag,
   CheckCircle,
   AlertCircle,
-  ArrowUp,
-  ArrowDown,
   Download,
   Share2,
+  Loader2,
+  Link as LinkIcon,
+  FileImage,
 } from 'lucide-react';
-import { storage, isFirebaseConfigured } from '../../lib/firebase';
+import { storage, isFirebaseConfigured, auth } from '../../lib/firebase';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 interface PendingUpload {
-  file: File;
+  file?: File;
   previewUrl: string;
   title: string;
   description: string;
@@ -33,9 +33,83 @@ interface PendingUpload {
   progress: number;
   status: 'pending' | 'uploading' | 'completed' | 'error';
   errorMessage?: string;
+  isExternalUrl?: boolean;
 }
 
-export const InfographicGallery: React.FC = () => {
+interface InfographicGalleryProps {
+  limit?: number;
+  showHeader?: boolean;
+  showFilters?: boolean;
+}
+
+/**
+ * Optimizes image file to fit within browser storage and Firestore limits (<1MB)
+ * while preserving high visual clarity.
+ */
+const optimizeImageFile = async (file: File, maxDimension = 1400, quality = 0.82): Promise<string> => {
+  if (!file.type.startsWith('image/')) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      let { width, height } = img;
+      if (width > maxDimension || height > maxDimension) {
+        if (width > height) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        } else {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+        return;
+      }
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, width, height);
+
+      let dataUrl = canvas.toDataURL('image/webp', quality);
+      if (!dataUrl.startsWith('data:image/webp')) {
+        dataUrl = canvas.toDataURL('image/jpeg', quality);
+      }
+      resolve(dataUrl);
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.readAsDataURL(file);
+    };
+
+    img.src = objectUrl;
+  });
+};
+
+export const InfographicGallery: React.FC<InfographicGalleryProps> = ({
+  limit,
+  showHeader = true,
+  showFilters = true,
+}) => {
   const {
     infographics,
     addInfographic,
@@ -55,6 +129,13 @@ export const InfographicGallery: React.FC = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([]);
   const [isUploadingBatch, setIsUploadingBatch] = useState(false);
+  const [copyNotice, setCopyNotice] = useState<string | null>(null);
+
+  // Tab mode in upload modal: 'file' | 'url'
+  const [uploadMode, setUploadMode] = useState<'file' | 'url'>('file');
+  const [directUrlInput, setDirectUrlInput] = useState('');
+  const [directTitleInput, setDirectTitleInput] = useState('');
+  const [directDescInput, setDirectDescInput] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -74,24 +155,45 @@ export const InfographicGallery: React.FC = () => {
         file,
         previewUrl,
         title: cleanTitle,
-        description: 'Contingent guide and visual briefing pack.',
+        description: 'Panduan visual dan infografik kontinjen.',
         topicId: topics[0]?.id || '',
         eventId: '',
-        tags: 'SOAR2026, Contingent',
+        tags: 'SOAR2026, Kontinjen',
         progress: 0,
         status: 'pending',
       };
     });
 
     setPendingUploads((prev) => [...prev, ...newPending]);
-    // Reset file input so same file can be selected again if needed
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleAddDirectUrl = () => {
+    if (!directUrlInput.trim()) return;
+    const cleanTitle = directTitleInput.trim() || 'Infografik Kontinjen';
+    const newPendingItem: PendingUpload = {
+      previewUrl: directUrlInput.trim(),
+      title: cleanTitle,
+      description: directDescInput.trim() || 'Panduan visual dan infografik kontinjen.',
+      topicId: topics[0]?.id || '',
+      eventId: '',
+      tags: 'SOAR2026, Peta',
+      progress: 0,
+      status: 'pending',
+      isExternalUrl: true,
+    };
+    setPendingUploads((prev) => [...prev, newPendingItem]);
+    setDirectUrlInput('');
+    setDirectTitleInput('');
+    setDirectDescInput('');
   };
 
   const removePendingUpload = (index: number) => {
     setPendingUploads((prev) => {
       const copy = [...prev];
-      URL.revokeObjectURL(copy[index].previewUrl);
+      if (copy[index].file) {
+        URL.revokeObjectURL(copy[index].previewUrl);
+      }
       copy.splice(index, 1);
       return copy;
     });
@@ -104,39 +206,54 @@ export const InfographicGallery: React.FC = () => {
   };
 
   const uploadSingleItem = async (item: PendingUpload, index: number): Promise<boolean> => {
-    updatePendingUpload(index, { status: 'uploading', progress: 10 });
+    updatePendingUpload(index, { status: 'uploading', progress: 15 });
 
     try {
       let finalImageUrl = item.previewUrl;
 
-      // Check if real Firebase Storage is configured
-      if (isFirebaseConfigured && storage) {
-        const storagePath = `infographics/${Date.now()}_${item.file.name}`;
-        const storageRef = ref(storage, storagePath);
-        const uploadTask = uploadBytesResumable(storageRef, item.file);
+      // If it's a file, handle upload or optimization
+      if (item.file) {
+        let storageUploaded = false;
 
-        await new Promise<void>((resolve, reject) => {
-          uploadTask.on(
-            'state_changed',
-            (snapshot) => {
-              const p = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-              updatePendingUpload(index, { progress: p });
-            },
-            (error) => reject(error),
-            async () => {
-              finalImageUrl = await getDownloadURL(uploadTask.snapshot.ref);
-              resolve();
-            }
-          );
-        });
-      } else {
-        // Preview mode: convert file to persistent Data URL for local storage
-        finalImageUrl = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target?.result as string);
-          reader.readAsDataURL(item.file);
-        });
-        updatePendingUpload(index, { progress: 100 });
+        // 1. Try Firebase Storage if authenticated
+        if (isFirebaseConfigured && storage && auth?.currentUser) {
+          try {
+            const safeName = item.file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+            const storagePath = `infographics/${Date.now()}_${safeName}`;
+            const storageRef = ref(storage, storagePath);
+            const uploadTask = uploadBytesResumable(storageRef, item.file);
+
+            await new Promise<void>((resolve, reject) => {
+              uploadTask.on(
+                'state_changed',
+                (snapshot) => {
+                  const p = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+                  updatePendingUpload(index, { progress: Math.max(15, Math.min(90, p)) });
+                },
+                (error) => reject(error),
+                async () => {
+                  try {
+                    finalImageUrl = await getDownloadURL(uploadTask.snapshot.ref);
+                    storageUploaded = true;
+                    resolve();
+                  } catch (e) {
+                    reject(e);
+                  }
+                }
+              );
+            });
+          } catch (storageErr) {
+            console.warn('[Firebase Storage] Falling back to high-quality local storage:', storageErr);
+            storageUploaded = false;
+          }
+        }
+
+        // 2. If storage was not used or failed (e.g. unauthenticated PIN admin mode)
+        if (!storageUploaded || !finalImageUrl) {
+          updatePendingUpload(index, { progress: 50 });
+          finalImageUrl = await optimizeImageFile(item.file);
+          updatePendingUpload(index, { progress: 90 });
+        }
       }
 
       const tagsArray = item.tags
@@ -145,45 +262,49 @@ export const InfographicGallery: React.FC = () => {
         .filter(Boolean);
 
       await addInfographic({
-        title: item.title,
-        description: item.description,
+        title: item.title.trim() || 'Infografik Kontinjen',
+        description: item.description.trim() || 'Panduan visual dan infografik kontinjen.',
         imageUrl: finalImageUrl,
         topicId: item.topicId || undefined,
         eventId: item.eventId || undefined,
         tags: tagsArray,
         status: 'published',
         displayOrder: infographics.length + 1,
-        sizeBytes: item.file.size,
+        sizeBytes: item.file?.size || 250000,
       });
 
       updatePendingUpload(index, { status: 'completed', progress: 100 });
       return true;
     } catch (err: unknown) {
       const e = err as { message?: string };
+      console.error('Upload single item failed:', err);
       updatePendingUpload(index, {
         status: 'error',
-        errorMessage: e.message || 'Upload failed. Tap to retry.',
+        errorMessage: e.message || 'Gagal memuat naik. Sila cuba lagi.',
       });
       return false;
     }
   };
 
   const handleStartBatchUpload = async () => {
+    if (pendingUploads.length === 0) return;
     setIsUploadingBatch(true);
+
+    let allSucceeded = true;
     for (let i = 0; i < pendingUploads.length; i++) {
       if (pendingUploads[i].status !== 'completed') {
-        await uploadSingleItem(pendingUploads[i], i);
+        const ok = await uploadSingleItem(pendingUploads[i], i);
+        if (!ok) allSucceeded = false;
       }
     }
+
     setIsUploadingBatch(false);
 
-    // If all completed, close modal
-    const allDone = pendingUploads.every((p) => p.status === 'completed');
-    if (allDone) {
+    if (allSucceeded) {
       setTimeout(() => {
         setPendingUploads([]);
         setIsUploadModalOpen(false);
-      }, 600);
+      }, 700);
     }
   };
 
@@ -202,82 +323,117 @@ export const InfographicGallery: React.FC = () => {
     return true;
   });
 
-  return (
-    <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-            Infographics, Posters & Venue Maps
-          </h2>
-          <p className="text-xs text-slate-500">
-            High-resolution visual guidelines, wayfinding charts and event schedules
-          </p>
-        </div>
+  const displayed = limit ? filtered.slice(0, limit) : filtered;
 
-        {isAdminMode && (
-          <button
-            onClick={() => setIsUploadModalOpen(true)}
-            className="min-h-[36px] px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 self-start transition-colors shadow-xs"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            <span>Upload Infographic</span>
-          </button>
-        )}
-      </div>
+  const handleShare = () => {
+    try {
+      navigator.clipboard.writeText(window.location.href);
+      setCopyNotice('Pautan berjaya disalin ke papan keratan!');
+      setTimeout(() => setCopyNotice(null), 2500);
+    } catch {
+      setCopyNotice('Pautan: ' + window.location.href);
+      setTimeout(() => setCopyNotice(null), 3000);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Toast Notification */}
+      {copyNotice && (
+        <div className="fixed top-4 right-4 z-50 bg-slate-900 text-white text-xs px-4 py-2.5 rounded-xl shadow-lg border border-slate-700 animate-in fade-in">
+          {copyNotice}
+        </div>
+      )}
+
+      {/* Optional Inner Header (when rendered standalone) */}
+      {showHeader && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+              Infographics, Posters & Venue Maps
+            </h2>
+            <p className="text-xs text-slate-500">
+              High-resolution visual guidelines, wayfinding charts and event schedules
+            </p>
+          </div>
+
+          {isAdminMode && (
+            <button
+              onClick={() => setIsUploadModalOpen(true)}
+              className="min-h-[36px] px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 self-start transition-colors shadow-xs cursor-pointer"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Upload Infographic</span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        <button
-          onClick={() => {
-            setSelectedTopicFilter(null);
-            setSelectedEventFilter(null);
-          }}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
-            !selectedTopicFilter && !selectedEventFilter
-              ? 'bg-slate-900 text-white font-medium shadow-xs'
-              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-          }`}
-        >
-          All Infographics
-        </button>
-
-        {topics.map((t) => (
+      {showFilters && (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
           <button
-            key={t.id}
-            onClick={() => {
-              setSelectedEventFilter(null);
-              setSelectedTopicFilter(selectedTopicFilter === t.id ? null : t.id);
-            }}
-            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
-              selectedTopicFilter === t.id
-                ? 'bg-blue-600 text-white font-medium shadow-xs'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-            }`}
-          >
-            {t.title}
-          </button>
-        ))}
-
-        {events.map((e) => (
-          <button
-            key={e.id}
             onClick={() => {
               setSelectedTopicFilter(null);
-              setSelectedEventFilter(selectedEventFilter === e.id ? null : e.id);
+              setSelectedEventFilter(null);
             }}
-            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
-              selectedEventFilter === e.id
-                ? 'bg-indigo-600 text-white font-medium shadow-xs'
+            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
+              !selectedTopicFilter && !selectedEventFilter
+                ? 'bg-slate-900 text-white font-medium shadow-xs'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
             }`}
           >
-            {e.title}
+            All Infographics
           </button>
-        ))}
-      </div>
+
+          {topics.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => {
+                setSelectedEventFilter(null);
+                setSelectedTopicFilter(selectedTopicFilter === t.id ? null : t.id);
+              }}
+              className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
+                selectedTopicFilter === t.id
+                  ? 'bg-blue-600 text-white font-medium shadow-xs'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              }`}
+            >
+              {t.title}
+            </button>
+          ))}
+
+          {events.map((e) => (
+            <button
+              key={e.id}
+              onClick={() => {
+                setSelectedTopicFilter(null);
+                setSelectedEventFilter(selectedEventFilter === e.id ? null : e.id);
+              }}
+              className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
+                selectedEventFilter === e.id
+                  ? 'bg-indigo-600 text-white font-medium shadow-xs'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              }`}
+            >
+              {e.title}
+            </button>
+          ))}
+
+          {isAdminMode && !showHeader && (
+            <button
+              onClick={() => setIsUploadModalOpen(true)}
+              className="ml-auto px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Muat Naik Poster</span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Empty State */}
-      {filtered.length === 0 && (
+      {displayed.length === 0 && (
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-8 text-center">
           <AlertCircle className="w-8 h-8 text-slate-400 mx-auto mb-2" />
           <h3 className="text-sm font-semibold text-slate-900">No Infographics Found</h3>
@@ -289,9 +445,9 @@ export const InfographicGallery: React.FC = () => {
         </div>
       )}
 
-      {/* Infographic Cards Grid */}
+      {/* Original Infographic Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((item, index) => {
+        {displayed.map((item) => {
           const associatedTopic = topics.find((t) => t.id === item.topicId);
           const associatedEvent = events.find((e) => e.id === item.eventId);
 
@@ -313,7 +469,6 @@ export const InfographicGallery: React.FC = () => {
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-102"
                     onError={(e) => {
-                      // Resilient fallback
                       (e.target as HTMLImageElement).src =
                         'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1200&q=80';
                     }}
@@ -388,7 +543,7 @@ export const InfographicGallery: React.FC = () => {
               <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
                 <button
                   onClick={() => setActiveLightbox(item)}
-                  className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
                 >
                   <Maximize2 className="w-3 h-3" />
                   <span>Enlarge</span>
@@ -402,7 +557,7 @@ export const InfographicGallery: React.FC = () => {
                           status: item.status === 'published' ? 'draft' : 'published',
                         })
                       }
-                      className="p-1 text-slate-400 hover:text-slate-700 rounded-md"
+                      className="p-1 text-slate-400 hover:text-slate-700 rounded-md cursor-pointer"
                       title={item.status === 'published' ? 'Hide item' : 'Publish item'}
                     >
                       {item.status === 'published' ? (
@@ -413,12 +568,12 @@ export const InfographicGallery: React.FC = () => {
                     </button>
                     <button
                       onClick={() => {
-                        if (window.confirm(`Delete infographic "${item.title}"?`)) {
+                        if (window.confirm(`Padam infografik "${item.title}"?`)) {
                           deleteInfographic(item.id);
                         }
                       }}
-                      className="p-1 text-slate-400 hover:text-rose-600 rounded-md"
-                      title="Delete infographic"
+                      className="p-1 text-slate-400 hover:text-rose-600 rounded-md cursor-pointer"
+                      title="Padam infografik"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -451,18 +606,15 @@ export const InfographicGallery: React.FC = () => {
                   <Download className="w-4 h-4" />
                 </a>
                 <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(window.location.href);
-                    alert('Portal link copied to clipboard!');
-                  }}
-                  className="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg"
+                  onClick={handleShare}
+                  className="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg cursor-pointer"
                   title="Share link"
                 >
                   <Share2 className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setActiveLightbox(null)}
-                  className="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg"
+                  className="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -480,28 +632,56 @@ export const InfographicGallery: React.FC = () => {
         </div>
       )}
 
-      {/* Upload Infographic Modal (Batch Support) */}
+      {/* Upload Infographic Modal (Batch Support & Link Support) */}
       {isAdminMode && isUploadModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm"
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
             onClick={() => !isUploadingBatch && setIsUploadModalOpen(false)}
           />
           <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 p-5 sm:p-6 z-10 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
               <div>
                 <h3 className="text-base font-bold text-slate-900">
-                  Upload Contingent Posters & Infographics
+                  Muat Naik Infografik & Poster Kontinjen
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Select one or multiple images from your phone or computer
+                  Pilih fail imej dari peranti atau masukkan pautan imej luaran
                 </p>
               </div>
               <button
                 onClick={() => !isUploadingBatch && setIsUploadModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-md"
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-md cursor-pointer"
               >
                 <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Mode Switcher: Fail Peranti / Pautan URL */}
+            <div className="flex items-center gap-2 mb-4">
+              <button
+                type="button"
+                onClick={() => setUploadMode('file')}
+                className={`flex-1 py-2 px-3 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                  uploadMode === 'file'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
+              >
+                <FileImage className="w-4 h-4" />
+                <span>Pilih Fail Imej</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setUploadMode('url')}
+                className={`flex-1 py-2 px-3 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                  uploadMode === 'url'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
+              >
+                <LinkIcon className="w-4 h-4" />
+                <span>Pautkan URL Imej</span>
               </button>
             </div>
 
@@ -515,33 +695,88 @@ export const InfographicGallery: React.FC = () => {
               className="hidden"
             />
 
-            {/* Drop / Trigger Area */}
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-2xl p-6 text-center cursor-pointer transition-colors bg-slate-50/50 hover:bg-blue-50/20"
-            >
-              <Upload className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-              <p className="text-xs sm:text-sm font-semibold text-slate-800">
-                Tap or click to browse files
-              </p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Supports JPG, PNG, WEBP, PDF infographics up to 15MB each
-              </p>
-            </div>
+            {/* Drop / Trigger Area for Files */}
+            {uploadMode === 'file' && (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-blue-300 hover:border-blue-500 rounded-2xl p-6 text-center cursor-pointer transition-colors bg-blue-50/30 hover:bg-blue-50/60"
+              >
+                <Upload className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                <p className="text-xs sm:text-sm font-semibold text-slate-800">
+                  Ketik atau klik untuk pilih fail poster
+                </p>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Menyokong JPG, PNG, WEBP dengan pengoptimuman automatik
+                </p>
+              </div>
+            )}
+
+            {/* Direct Image URL Form */}
+            {uploadMode === 'url' && (
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Pautan Imej (URL) *
+                  </label>
+                  <input
+                    type="url"
+                    value={directUrlInput}
+                    onChange={(e) => setDirectUrlInput(e.target.value)}
+                    placeholder="https://example.com/peta-venue.png"
+                    className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Tajuk Poster *
+                  </label>
+                  <input
+                    type="text"
+                    value={directTitleInput}
+                    onChange={(e) => setDirectTitleInput(e.target.value)}
+                    placeholder="Contoh: Peta Kampus & Lokasi Dewan Utama"
+                    className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Penerangan Ringkas
+                  </label>
+                  <input
+                    type="text"
+                    value={directDescInput}
+                    onChange={(e) => setDirectDescInput(e.target.value)}
+                    placeholder="Panduan kedudukan dewan dan laluan kontinjen..."
+                    className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddDirectUrl}
+                  disabled={!directUrlInput.trim()}
+                  className="w-full py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
+                >
+                  + Tambah ke Senarai Muat Naik
+                </button>
+              </div>
+            )}
 
             {/* Selected Batch Items */}
             {pendingUploads.length > 0 && (
               <div className="mt-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-900">
-                    {pendingUploads.length} File(s) Staged for Upload
+                    {pendingUploads.length} Fail Disediakan Untuk Muat Naik
                   </span>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
-                  >
-                    + Add More Files
-                  </button>
+                  {uploadMode === 'file' && (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-xs text-blue-600 hover:text-blue-800 font-semibold cursor-pointer"
+                    >
+                      + Tambah Lagi Fail
+                    </button>
+                  )}
                 </div>
 
                 <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
@@ -554,7 +789,11 @@ export const InfographicGallery: React.FC = () => {
                         <img
                           src={item.previewUrl}
                           alt="preview"
-                          className="w-16 h-16 object-cover rounded-lg border border-slate-200 shrink-0"
+                          className="w-16 h-16 object-cover rounded-lg border border-slate-200 shrink-0 bg-slate-200"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1200&q=80';
+                          }}
                         />
 
                         <div className="flex-1 space-y-2 min-w-0">
@@ -562,7 +801,7 @@ export const InfographicGallery: React.FC = () => {
                             type="text"
                             value={item.title}
                             onChange={(e) => updatePendingUpload(idx, { title: e.target.value })}
-                            placeholder="Poster Title *"
+                            placeholder="Tajuk Poster *"
                             className="w-full px-2.5 py-1 text-xs bg-white border border-slate-200 rounded-md text-slate-900 font-medium"
                           />
 
@@ -572,7 +811,7 @@ export const InfographicGallery: React.FC = () => {
                             onChange={(e) =>
                               updatePendingUpload(idx, { description: e.target.value })
                             }
-                            placeholder="Description / Guide"
+                            placeholder="Penerangan / Panduan"
                             className="w-full px-2.5 py-1 text-xs bg-white border border-slate-200 rounded-md text-slate-900"
                           />
 
@@ -582,7 +821,7 @@ export const InfographicGallery: React.FC = () => {
                               onChange={(e) => updatePendingUpload(idx, { topicId: e.target.value })}
                               className="px-2 py-1 text-[11px] bg-white border border-slate-200 rounded-md text-slate-800"
                             >
-                              <option value="">No Topic</option>
+                              <option value="">Tiada Topik</option>
                               {topics.map((t) => (
                                 <option key={t.id} value={t.id}>
                                   {t.title}
@@ -595,7 +834,7 @@ export const InfographicGallery: React.FC = () => {
                               onChange={(e) => updatePendingUpload(idx, { eventId: e.target.value })}
                               className="px-2 py-1 text-[11px] bg-white border border-slate-200 rounded-md text-slate-800"
                             >
-                              <option value="">No Event Link</option>
+                              <option value="">Tiada Pautan Acara</option>
                               {events.map((ev) => (
                                 <option key={ev.id} value={ev.id}>
                                   {ev.title}
@@ -607,8 +846,9 @@ export const InfographicGallery: React.FC = () => {
 
                         {!isUploadingBatch && (
                           <button
+                            type="button"
                             onClick={() => removePendingUpload(idx)}
-                            className="p-1 text-slate-400 hover:text-rose-600 rounded-md"
+                            className="p-1 text-slate-400 hover:text-rose-600 rounded-md cursor-pointer"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -624,8 +864,9 @@ export const InfographicGallery: React.FC = () => {
                               style={{ width: `${item.progress}%` }}
                             />
                           </div>
-                          <span className="text-[10px] text-blue-600 font-semibold">
-                            Uploading... {item.progress}%
+                          <span className="text-[10px] text-blue-600 font-semibold flex items-center gap-1">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Memproses fail... {item.progress}%
                           </span>
                         </div>
                       )}
@@ -633,7 +874,7 @@ export const InfographicGallery: React.FC = () => {
                       {item.status === 'completed' && (
                         <div className="flex items-center gap-1 text-[11px] text-emerald-600 font-semibold">
                           <CheckCircle className="w-3.5 h-3.5" />
-                          <span>Uploaded & Persisted</span>
+                          <span>Berjaya Dimuat Naik & Diterbitkan</span>
                         </div>
                       )}
 
@@ -653,17 +894,27 @@ export const InfographicGallery: React.FC = () => {
                 type="button"
                 onClick={() => setIsUploadModalOpen(false)}
                 disabled={isUploadingBatch}
-                className="px-4 py-2 text-xs text-slate-600 hover:text-slate-800 rounded-xl"
+                className="px-4 py-2 text-xs text-slate-600 hover:text-slate-800 rounded-xl cursor-pointer"
               >
-                Cancel
+                Batal
               </button>
               <button
                 type="button"
                 onClick={handleStartBatchUpload}
                 disabled={isUploadingBatch || pendingUploads.length === 0}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow-sm transition-all"
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
               >
-                {isUploadingBatch ? 'Uploading Files...' : `Upload & Publish (${pendingUploads.length})`}
+                {isUploadingBatch ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Sedang Memuat Naik...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4" />
+                    <span>Muat Naik & Terbitkan ({pendingUploads.length})</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

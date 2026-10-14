@@ -2,7 +2,6 @@ import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { InlineEdit } from '../common/InlineEdit';
-import { PhaseSwitcher } from './PhaseSwitcher';
 import { Search, Bell, Clock, RefreshCw } from 'lucide-react';
 
 export const HeroBanner: React.FC = () => {
@@ -120,11 +119,6 @@ export const HeroBanner: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
-
-        {/* Phase Switcher */}
-        <div className="mt-4">
-          <PhaseSwitcher />
         </div>
 
         {/* Admin Quick Reset Helper in Admin Mode */}
