@@ -3,6 +3,7 @@
  */
 
 export const CANONICAL_SLUGS = [
+  'all',
   'overview',
   'infografik',
   'pengumuman',
@@ -12,11 +13,28 @@ export const CANONICAL_SLUGS = [
   'topik',
 ] as const;
 
-export type CanonicalSlug = (typeof CANONICAL_SLUGS)[number];
+export type CanonicalSlug = (typeof CANONICAL_SLUGS)[number] | (string & {});
 
-export const SLUG_MAP: Record<string, CanonicalSlug> = {
-  home: 'overview',
-  overview: 'overview',
+/**
+ * Cleanly transforms any text into a URL-friendly slug
+ */
+export function slugify(text: string): string {
+  if (!text) return '';
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // remove non-alphanumeric except space and hyphen
+    .replace(/\s+/g, '-') // replace spaces with hyphens
+    .replace(/-+/g, '-') // collapse multiple hyphens
+    .replace(/^-+/, '') // trim leading hyphen
+    .replace(/-+$/, ''); // trim trailing hyphen
+}
+
+export const SLUG_MAP: Record<string, string> = {
+  all: 'all',
+  home: 'all',
+  overview: 'all',
   infografik: 'infografik',
   infographics: 'infografik',
   announcements: 'pengumuman',
@@ -32,6 +50,7 @@ export const SLUG_MAP: Record<string, CanonicalSlug> = {
 };
 
 export const TAB_FROM_SLUG: Record<string, string> = {
+  all: 'home',
   overview: 'home',
   home: 'home',
   infografik: 'home',
@@ -48,24 +67,101 @@ export const TAB_FROM_SLUG: Record<string, string> = {
   topics: 'topics',
 };
 
+/**
+ * Returns effective slug for a tab or section based on settings or defaults
+ */
+export function getEffectiveSlug(
+  targetId: string,
+  settings?: {
+    tabSlugs?: Record<string, string>;
+    sectionSlugs?: Record<string, string>;
+    navLabels?: Record<string, string>;
+  }
+): string {
+  if (settings?.tabSlugs?.[targetId]) {
+    return slugify(settings.tabSlugs[targetId]);
+  }
+  if (settings?.sectionSlugs?.[targetId]) {
+    return slugify(settings.sectionSlugs[targetId]);
+  }
+
+  // Default aliases
+  if (targetId === 'home' || targetId === 'all' || targetId === 'overview') {
+    return 'all';
+  }
+  if (targetId === 'infografik' || targetId === 'infographics') {
+    return 'infografik';
+  }
+  if (targetId === 'announcements') return 'pengumuman';
+  if (targetId === 'schedule') return 'jadual';
+  if (targetId === 'travel') return 'penginapan';
+  if (targetId === 'documents') return 'dokumen';
+  if (targetId === 'topics') return 'topik';
+
+  return slugify(targetId) || 'all';
+}
+
 export interface SlugResolution {
   tab: string;
-  slug: CanonicalSlug;
+  slug: string;
   scrollTargetId?: string;
   isRecognized: boolean;
 }
 
 /**
- * Resolves any hash / slug string (with or without #, uppercase or alias)
+ * Resolves any hash / slug string (with or without #, uppercase or alias, custom slugs)
  */
-export function resolveSlug(rawInput: string | null | undefined): SlugResolution {
+export function resolveSlug(
+  rawInput: string | null | undefined,
+  settings?: {
+    tabSlugs?: Record<string, string>;
+    sectionSlugs?: Record<string, string>;
+  }
+): SlugResolution {
   if (!rawInput) {
-    return { tab: 'home', slug: 'overview', isRecognized: false };
+    return { tab: 'home', slug: 'all', isRecognized: false };
   }
 
   const clean = rawInput.trim().replace(/^#+/, '').toLowerCase();
   if (!clean) {
-    return { tab: 'home', slug: 'overview', isRecognized: false };
+    return { tab: 'home', slug: 'all', isRecognized: false };
+  }
+
+  // Check custom tab slugs first
+  if (settings?.tabSlugs) {
+    for (const [tabId, customSlug] of Object.entries(settings.tabSlugs)) {
+      if (customSlug && slugify(customSlug) === clean) {
+        return {
+          tab: tabId === 'infografik' ? 'home' : tabId,
+          slug: clean,
+          scrollTargetId: tabId === 'infografik' ? 'infografik' : undefined,
+          isRecognized: true,
+        };
+      }
+    }
+  }
+
+  // Check custom section slugs
+  if (settings?.sectionSlugs) {
+    for (const [secId, customSlug] of Object.entries(settings.sectionSlugs)) {
+      if (customSlug && slugify(customSlug) === clean) {
+        return {
+          tab: secId === 'infografik' ? 'home' : (TAB_FROM_SLUG[secId] || 'home'),
+          slug: clean,
+          scrollTargetId: secId,
+          isRecognized: true,
+        };
+      }
+    }
+  }
+
+  // Handle default all / overview / home
+  if (clean === 'all' || clean === 'overview' || clean === 'home') {
+    return {
+      tab: 'home',
+      slug: 'all',
+      isRecognized: true,
+    };
   }
 
   // Handle infografik specifically inside home tab
@@ -80,7 +176,7 @@ export function resolveSlug(rawInput: string | null | undefined): SlugResolution
 
   if (TAB_FROM_SLUG[clean]) {
     const tab = TAB_FROM_SLUG[clean];
-    const slug = SLUG_MAP[clean] || (clean as CanonicalSlug);
+    const slug = SLUG_MAP[clean] || clean;
     return {
       tab,
       slug,
@@ -89,11 +185,16 @@ export function resolveSlug(rawInput: string | null | undefined): SlugResolution
     };
   }
 
-  // Fallback to overview
-  return { tab: 'home', slug: 'overview', isRecognized: false };
+  // Fallback to all
+  return { tab: 'home', slug: 'all', isRecognized: false };
 }
 
-export const SECTION_METADATA: Record<CanonicalSlug, { title: string; description: string; sectionName: string }> = {
+export const SECTION_METADATA: Record<string, { title: string; description: string; sectionName: string }> = {
+  all: {
+    sectionName: 'Overview & Maklumat Penuh',
+    title: 'Overview Portal & Maklumat Penuh — Kontinjen KPMBP',
+    description: 'Portal rasmi rujukan pantas, ringkasan kontinjen dan info terkini Kontinjen KPMBP ke SOAR IPMA 2026.',
+  },
   overview: {
     sectionName: 'Overview',
     title: 'Overview Portal & Maklumat Utama — Kontinjen KPMBP',

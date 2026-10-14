@@ -63,6 +63,15 @@ export const initialSettings: PortalSettings = {
     text: 'All participants must report to Main Foyer for contingent briefing at 08:30 AM.',
   },
   quickAccessItems: defaultQuickAccessItems,
+  footer: {
+    title: 'SYNCROZZ KPMBP Contingent Hub · SOAR IPMA 2026',
+    subtitle: 'Simple by Default. Powerful When Needed. · Kolej Poly-Tech MARA Bangi',
+    links: [
+      { id: 'fl-1', label: 'Emergency Helpline', targetType: 'tab', targetValue: 'travel' },
+      { id: 'fl-2', label: 'Handbook', targetType: 'tab', targetValue: 'documents' },
+    ],
+    complianceTag: 'SES v4.5 Compliant',
+  },
 };
 
 export const initialTopics: Topic[] = [

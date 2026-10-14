@@ -128,6 +128,20 @@ export interface QuickAccessItem {
   displayOrder?: number;
 }
 
+export interface FooterLink {
+  id: string;
+  label: string;
+  targetType: 'tab' | 'url';
+  targetValue: string;
+}
+
+export interface FooterSettings {
+  title?: string;
+  subtitle?: string;
+  links?: FooterLink[];
+  complianceTag?: string;
+}
+
 export interface PortalSettings {
   activePhase: EventPhase;
   contingentName: string;
@@ -139,6 +153,8 @@ export interface PortalSettings {
     text: string;
   };
   navLabels?: Record<string, string>;
+  tabSlugs?: Record<string, string>;
+  sectionSlugs?: Record<string, string>;
   sectionTitles?: {
     infographicsTitle?: string;
     infographicsSubtitle?: string;
@@ -148,6 +164,7 @@ export interface PortalSettings {
     viewFullGalleryLabel?: string;
   };
   quickAccessItems?: QuickAccessItem[];
+  footer?: FooterSettings;
 }
 
 export interface UserProfile {

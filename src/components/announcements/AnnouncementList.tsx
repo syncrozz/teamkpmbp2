@@ -30,6 +30,8 @@ export const AnnouncementList: React.FC<{ limit?: number; showHeader?: boolean }
     addAnnouncement,
     events,
     searchQuery,
+    settings,
+    updateSettings,
   } = useApp();
   const { isAdminMode } = useAuth();
 
@@ -95,10 +97,37 @@ export const AnnouncementList: React.FC<{ limit?: number; showHeader?: boolean }
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-              Announcements & Notices
+              <InlineEdit
+                value={settings.sectionTitles?.announcementsTitle || 'Announcements & Notices'}
+                onSave={(val) =>
+                  updateSettings({
+                    sectionTitles: {
+                      ...settings.sectionTitles,
+                      announcementsTitle: val,
+                    },
+                  })
+                }
+                as="span"
+                label="Tajuk Pengumuman"
+              />
             </h2>
             <p className="text-xs text-slate-500">
-              Official memos, schedule revisions and technical updates
+              <InlineEdit
+                value={
+                  settings.sectionTitles?.announcementsSubtitle ||
+                  'Official memos, schedule revisions and technical updates'
+                }
+                onSave={(val) =>
+                  updateSettings({
+                    sectionTitles: {
+                      ...settings.sectionTitles,
+                      announcementsSubtitle: val,
+                    },
+                  })
+                }
+                as="span"
+                label="Caption Pengumuman"
+              />
             </p>
           </div>
 

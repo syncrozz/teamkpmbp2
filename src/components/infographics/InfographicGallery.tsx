@@ -471,7 +471,7 @@ export const InfographicGallery: React.FC<InfographicGalleryProps> = ({
           )}
 
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            {/* All Infographics button */}
+            {/* All filter button */}
             <button
               type="button"
               onClick={() => {
@@ -483,7 +483,7 @@ export const InfographicGallery: React.FC<InfographicGalleryProps> = ({
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
               }`}
             >
-              All Infographics
+              All
             </button>
 
             {/* Topic buttons with Admin edit/delete/reorder support */}

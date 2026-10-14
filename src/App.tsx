@@ -7,6 +7,7 @@ import React, { useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/layout/Header';
+import { Footer } from './components/layout/Footer';
 import { BottomNav } from './components/layout/BottomNav';
 import { AdminBar } from './components/admin/AdminBar';
 import { HeroBanner } from './components/home/HeroBanner';
@@ -25,6 +26,7 @@ import {
   updatePageOGIMeta,
   resolveSlug,
   CanonicalSlug,
+  getEffectiveSlug,
 } from './utils/slugRouting';
 import { SectionLinkButton } from './components/common/SectionLinkButton';
 
@@ -39,7 +41,7 @@ const MainContent: React.FC = () => {
   // Listen to hash changes in browser URL (slug deep-linking & smooth scroll)
   useEffect(() => {
     const handleHash = () => {
-      const resolution = resolveSlug(window.location.hash);
+      const resolution = resolveSlug(window.location.hash, settings);
       if (resolution.tab && resolution.tab !== activeTabRef.current) {
         setActiveTab(resolution.tab);
       }
@@ -62,20 +64,24 @@ const MainContent: React.FC = () => {
 
     window.addEventListener('hashchange', handleHash);
     return () => window.removeEventListener('hashchange', handleHash);
-  }, [setActiveTab]);
+  }, [setActiveTab, settings]);
 
   // Sync hash and dynamic OGI metadata when active tab changes
   useEffect(() => {
     const currentHash = window.location.hash.replace(/^#/, '').toLowerCase();
-    let targetSlug: CanonicalSlug = 'overview';
+    const effectiveHomeSlug = getEffectiveSlug('home', settings);
+    const effectiveInfoSlug = getEffectiveSlug('infografik', settings);
+    let targetSlug: string = effectiveHomeSlug;
 
     if (activeTab === 'home') {
       targetSlug =
-        currentHash === 'infografik' || currentHash === 'infographics'
-          ? 'infografik'
-          : 'overview';
+        currentHash === effectiveInfoSlug ||
+        currentHash === 'infografik' ||
+        currentHash === 'infographics'
+          ? effectiveInfoSlug
+          : effectiveHomeSlug;
     } else {
-      targetSlug = SLUG_MAP[activeTab] || 'overview';
+      targetSlug = getEffectiveSlug(activeTab, settings);
     }
 
     if (window.location.hash !== `#${targetSlug}`) {
@@ -90,7 +96,11 @@ const MainContent: React.FC = () => {
       publishedInfographics[0]?.imageUrl || infographics[0]?.imageUrl || null;
 
     let representativeImage: string | null = null;
-    if (activeTab === 'home' || targetSlug === 'infografik') {
+    if (
+      activeTab === 'home' ||
+      targetSlug === effectiveInfoSlug ||
+      targetSlug === 'infografik'
+    ) {
       representativeImage = fallbackImage;
     } else if (activeTab === 'announcements') {
       const withImg = announcements.find((a) => a.status === 'published' && a.imageUrl);
@@ -99,15 +109,18 @@ const MainContent: React.FC = () => {
       representativeImage = fallbackImage;
     }
 
-    const meta = SECTION_METADATA[targetSlug] || SECTION_METADATA.overview;
+    const meta =
+      SECTION_METADATA[targetSlug] ||
+      SECTION_METADATA.all ||
+      SECTION_METADATA.overview;
 
     updatePageOGIMeta({
-      title: `${meta.title} · ${settings.contingentName || 'SYNCROZZ KPMBP'}`,
-      description: meta.description,
+      title: `${meta?.title || 'Portal Kontinjen'} · ${settings.contingentName || 'SYNCROZZ KPMBP'}`,
+      description: meta?.description,
       imageUrl: representativeImage,
       slug: targetSlug,
     });
-  }, [activeTab, infographics, announcements, settings.contingentName]);
+  }, [activeTab, infographics, announcements, settings]);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50/50 w-full max-w-full overflow-x-hidden">
@@ -142,23 +155,13 @@ const MainContent: React.FC = () => {
                       as="span"
                     />
                   </h2>
-                  <div className="text-xs text-slate-500">
-                    <InlineEdit
-                      value={settings.sectionTitles?.infographicsSubtitle || 'Venue wayfinding, stage specifications and emergency hotlines'}
-                      onSave={(val) =>
-                        updateSettings({
-                          sectionTitles: {
-                            ...settings.sectionTitles,
-                            infographicsSubtitle: val,
-                          },
-                        })
-                      }
-                      as="p"
-                    />
-                  </div>
                 </div>
 
-                <SectionLinkButton slug="infografik" />
+                <SectionLinkButton
+                  slug="infografik"
+                  sectionKey="infografik"
+                  titleForAutoSlug={settings.sectionTitles?.infographicsTitle || 'Infographics & Venue Maps'}
+                />
               </div>
 
               <InfographicGallery showHeader={false} />
@@ -266,37 +269,8 @@ const MainContent: React.FC = () => {
         )}
       </main>
 
-      {/* Quiet, Clean Footer */}
-      <footer className="border-t border-slate-200 bg-white py-8 text-xs text-slate-500 w-full max-w-full">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="space-y-1 text-center sm:text-left">
-            <p className="font-semibold text-slate-800">
-              SYNCROZZ KPMBP Contingent Hub · SOAR IPMA 2026
-            </p>
-            <p className="text-[11px] text-slate-400">
-              Simple by Default. Powerful When Needed. · Kolej Poly-Tech MARA Bangi
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-4 text-xs">
-            <button
-              onClick={() => setActiveTab('travel')}
-              className="hover:text-slate-900 transition-colors"
-            >
-              Emergency Helpline
-            </button>
-            <span aria-hidden="true" className="text-slate-300">·</span>
-            <button
-              onClick={() => setActiveTab('documents')}
-              className="hover:text-slate-900 transition-colors"
-            >
-              Handbook
-            </button>
-            <span aria-hidden="true" className="text-slate-300">·</span>
-            <span className="text-slate-400">SES v4.5 Compliant</span>
-          </div>
-        </div>
-      </footer>
+      {/* Footer (Editable in Admin Mode) */}
+      <Footer />
 
       {/* Mobile Fixed Bottom Navigation */}
       <BottomNav />
