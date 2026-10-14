@@ -41,8 +41,146 @@ export const ScheduleList: React.FC = () => {
   const [newDesc, setNewDesc] = useState('');
   const [newEventId, setNewEventId] = useState('');
 
-  // Collect distinct dates
-  const dates = ['all', ...Array.from(new Set(schedules.map((s) => s.date)))];
+  // Months map for parsing dates like "13 Okt 2026" or "14 Oct 2026"
+  const MONTHS_MAP: Record<string, number> = {
+    jan: 1, feb: 2, mac: 3, mar: 3, apr: 4, mei: 5, may: 5, jun: 6,
+    jul: 7, ogos: 8, aug: 8, sep: 9, okt: 10, oct: 10, nov: 11, dis: 12, dec: 12,
+  };
+
+  const parseDateToComparable = (dateStr: string): number => {
+    if (!dateStr) return 0;
+    const parts = dateStr.trim().toLowerCase().split(/\s+/);
+    if (parts.length >= 3) {
+      const day = parseInt(parts[0], 10) || 1;
+      const monthKey = parts[1].slice(0, 3);
+      const month = MONTHS_MAP[monthKey] || 1;
+      const year = parseInt(parts[2], 10) || 2026;
+      return new Date(year, month - 1, day).getTime();
+    }
+    const timestamp = Date.parse(dateStr);
+    return isNaN(timestamp) ? 0 : timestamp;
+  };
+
+  const parseTimeToMinutes = (timeStr: string): number => {
+    if (!timeStr) return 0;
+    const clean = timeStr.trim().toLowerCase();
+
+    const isPM = clean.includes('pm') || clean.includes('ptg') || clean.includes('petang') || clean.includes('malam');
+    const isAM = clean.includes('am') || clean.includes('pagi');
+
+    const match = clean.match(/(\d{1,2})[:.](\d{2})/) || clean.match(/(\d{1,2})/);
+    if (!match) return 0;
+
+    let hours = parseInt(match[1], 10);
+    const minutes = match[2] ? parseInt(match[2], 10) : 0;
+
+    if (isPM && hours < 12) {
+      hours += 12;
+    } else if (isAM && hours === 12) {
+      hours = 0;
+    }
+
+    return hours * 60 + minutes;
+  };
+
+  const TIME_OPTIONS = [
+    '06:00 AM', '06:30 AM', '07:00 AM', '07:15 AM', '07:30 AM', '07:45 AM',
+    '08:00 AM', '08:15 AM', '08:30 AM', '08:45 AM',
+    '09:00 AM', '09:15 AM', '09:30 AM', '09:45 AM',
+    '10:00 AM', '10:15 AM', '10:30 AM', '10:45 AM',
+    '11:00 AM', '11:15 AM', '11:30 AM', '11:45 AM',
+    '12:00 PM', '12:15 PM', '12:30 PM', '12:45 PM',
+    '01:00 PM', '01:15 PM', '01:30 PM', '01:45 PM',
+    '02:00 PM', '02:15 PM', '02:30 PM', '02:45 PM',
+    '03:00 PM', '03:15 PM', '03:30 PM', '03:45 PM',
+    '04:00 PM', '04:15 PM', '04:30 PM', '04:45 PM',
+    '05:00 PM', '05:15 PM', '05:30 PM', '05:45 PM',
+    '06:00 PM', '06:15 PM', '06:30 PM', '06:45 PM',
+    '07:00 PM', '07:15 PM', '07:30 PM', '07:45 PM',
+    '08:00 PM', '08:15 PM', '08:30 PM', '08:45 PM',
+    '09:00 PM', '09:15 PM', '09:30 PM', '09:45 PM',
+    '10:00 PM', '10:30 PM', '11:00 PM', '11:30 PM',
+  ];
+
+  const DEFAULT_EVENT_DATES = [
+    '13 Okt 2026',
+    '14 Okt 2026',
+    '15 Okt 2026',
+    '16 Okt 2026',
+    '17 Okt 2026',
+  ];
+
+  const time24To12 = (time24: string): string => {
+    if (!time24) return '';
+    const [hStr, mStr] = time24.split(':');
+    let h = parseInt(hStr, 10);
+    const m = mStr || '00';
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12;
+    if (h === 0) h = 12;
+    return `${String(h).padStart(2, '0')}:${m} ${ampm}`;
+  };
+
+  const time12To24 = (time12: string): string => {
+    if (!time12) return '09:00';
+    const clean = time12.trim().toLowerCase();
+    const isPM = clean.includes('pm') || clean.includes('ptg') || clean.includes('petang') || clean.includes('malam');
+    const isAM = clean.includes('am') || clean.includes('pagi');
+    const match = clean.match(/(\d{1,2})[:.](\d{2})/);
+    if (!match) return '09:00';
+    let h = parseInt(match[1], 10);
+    const m = match[2];
+    if (isPM && h < 12) h += 12;
+    if (isAM && h === 12) h = 0;
+    return `${String(h).padStart(2, '0')}:${m}`;
+  };
+
+  const dateIsoToMalay = (isoStr: string): string => {
+    if (!isoStr) return '';
+    const [year, month, day] = isoStr.split('-').map(Number);
+    const monthNames = ['Jan', 'Feb', 'Mac', 'Apr', 'Mei', 'Jun', 'Jul', 'Ogos', 'Sep', 'Okt', 'Nov', 'Dis'];
+    const mName = monthNames[(month || 10) - 1] || 'Okt';
+    return `${day} ${mName} ${year}`;
+  };
+
+  const dateMalayToIso = (dateStr: string): string => {
+    if (!dateStr) return '2026-10-14';
+    const months: Record<string, string> = {
+      jan: '01', feb: '02', mac: '03', mar: '03', apr: '04', mei: '05', may: '05',
+      jun: '06', jul: '07', ogos: '08', aug: '08', sep: '09', okt: '10', oct: '10',
+      nov: '11', dis: '12', dec: '12',
+    };
+    const parts = dateStr.trim().split(/\s+/);
+    if (parts.length >= 3) {
+      const day = parts[0].padStart(2, '0');
+      const mKey = parts[1].toLowerCase().slice(0, 3);
+      const m = months[mKey] || '10';
+      const year = parts[2];
+      return `${year}-${m}-${day}`;
+    }
+    const timestamp = Date.parse(dateStr);
+    if (!isNaN(timestamp)) {
+      const d = new Date(timestamp);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+    return '2026-10-14';
+  };
+
+  // Collect distinct dates sorted chronologically for filter tabs and dropdown
+  const rawDates = Array.from(new Set(schedules.map((s) => s.date).filter(Boolean)));
+  rawDates.sort((a, b) => parseDateToComparable(a) - parseDateToComparable(b));
+  const dates = ['all', ...rawDates];
+
+  const eventDatesList = Array.from(
+    new Set([
+      ...DEFAULT_EVENT_DATES,
+      ...rawDates,
+    ])
+  );
+  eventDatesList.sort((a, b) => parseDateToComparable(a) - parseDateToComparable(b));
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,6 +215,36 @@ export const ScheduleList: React.FC = () => {
       );
     }
     return true;
+  });
+
+  // Sort schedule slots strictly by chronological time:
+  // 1st is the earliest (paling awal), and last at the bottom is the latest (paling lewat) on that day
+  const sortedSchedules = [...filtered].sort((a, b) => {
+    // 1. If viewing all dates, order by date first
+    if (selectedDateFilter === 'all') {
+      const dateA = parseDateToComparable(a.date);
+      const dateB = parseDateToComparable(b.date);
+      if (dateA !== dateB) {
+        return dateA - dateB;
+      }
+    }
+
+    // 2. Sort by startTime: earliest (paling awal) to latest (paling lewat)
+    const timeA = parseTimeToMinutes(a.startTime);
+    const timeB = parseTimeToMinutes(b.startTime);
+    if (timeA !== timeB) {
+      return timeA - timeB;
+    }
+
+    // 3. Secondary sort by endTime
+    const endA = parseTimeToMinutes(a.endTime);
+    const endB = parseTimeToMinutes(b.endTime);
+    if (endA !== endB) {
+      return endA - endB;
+    }
+
+    // 4. Stable sort by title
+    return a.title.localeCompare(b.title);
   });
 
   return (
@@ -175,41 +343,78 @@ export const ScheduleList: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Column 1: Tarikh dari Kalendar */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                Date
+              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Tarikh (Date)</span>
+                </span>
+                <span className="text-[10px] text-blue-600 font-semibold">{newDate}</span>
               </label>
               <input
-                type="text"
-                value={newDate}
-                onChange={(e) => setNewDate(e.target.value)}
-                placeholder="e.g. 14 Oct 2026"
-                className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900"
+                type="date"
+                value={dateMalayToIso(newDate)}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setNewDate(dateIsoToMalay(e.target.value));
+                  }
+                }}
+                className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900 cursor-pointer"
+                title="Pilih tarikh dari kalendar"
               />
             </div>
+
+            {/* Column 2: Masa Mula dari Senarai Drop Down */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                Start Time
+              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Masa Mula (Start)</span>
+                </span>
+                <span className="text-[10px] text-blue-600 font-mono font-semibold">{newStartTime}</span>
               </label>
-              <input
-                type="text"
+              <select
                 value={newStartTime}
                 onChange={(e) => setNewStartTime(e.target.value)}
-                placeholder="09:00 AM"
-                className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900"
-              />
+                className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900 cursor-pointer font-mono"
+                title="Pilih masa mula daripada senarai drop down"
+              >
+                {!TIME_OPTIONS.includes(newStartTime) && (
+                  <option value={newStartTime}>{newStartTime}</option>
+                )}
+                {TIME_OPTIONS.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            {/* Column 3: Masa Tamat dari Senarai Drop Down */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                End Time
+              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Masa Tamat (End)</span>
+                </span>
+                <span className="text-[10px] text-blue-600 font-mono font-semibold">{newEndTime}</span>
               </label>
-              <input
-                type="text"
+              <select
                 value={newEndTime}
                 onChange={(e) => setNewEndTime(e.target.value)}
-                placeholder="10:30 AM"
-                className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900"
-              />
+                className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900 cursor-pointer font-mono"
+                title="Pilih masa tamat daripada senarai drop down"
+              >
+                {!TIME_OPTIONS.includes(newEndTime) && (
+                  <option value={newEndTime}>{newEndTime}</option>
+                )}
+                {TIME_OPTIONS.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -259,7 +464,7 @@ export const ScheduleList: React.FC = () => {
       )}
 
       {/* Empty State */}
-      {filtered.length === 0 && (
+      {sortedSchedules.length === 0 && (
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-8 text-center">
           <AlertCircle className="w-8 h-8 text-slate-400 mx-auto mb-2" />
           <h3 className="text-sm font-semibold text-slate-900">No Schedule Entries</h3>
@@ -273,7 +478,7 @@ export const ScheduleList: React.FC = () => {
 
       {/* Timeline Rows */}
       <div className="space-y-3">
-        {filtered.map((item) => {
+        {sortedSchedules.map((item) => {
           const associatedEvent = events.find((e) => e.id === item.associatedEventId);
 
           return (
