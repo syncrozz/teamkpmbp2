@@ -62,16 +62,6 @@ export const defaultQuickAccessItems: QuickAccessItem[] = [
     colorTheme: 'violet',
     displayOrder: 5,
   },
-  {
-    id: 'qa-topics',
-    title: 'Panduan Kontinjen',
-    desc: 'SOP penuh pasukan, tatatertib dan etika perbarisan',
-    targetType: 'tab',
-    targetValue: 'topics',
-    iconName: 'Compass',
-    colorTheme: 'cyan',
-    displayOrder: 6,
-  },
 ];
 
 export const initialSettings: PortalSettings = {
@@ -90,13 +80,14 @@ export const initialSettings: PortalSettings = {
     schedule: 'Jadual',
     travel: 'Logistik',
     documents: 'Dokumen',
-    topics: 'Panduan',
   },
   sectionTitles: {
     infographicsTitle: 'Infografik & Peta Lokasi Rasmi',
     infographicsSubtitle: 'Panduan visual berkualiti tinggi dan susun atur venue',
     announcementsTitle: 'Hebahan & Notis Terkini',
     announcementsSubtitle: 'Notis rasmi, memo dan panggilan teknikal daripada Urus Setia Kontinjen',
+    scheduleTitle: 'Contingent Master Schedule & Itinerary',
+    scheduleSubtitle: 'Chronological timetable, sound checks, ceremony calls and competition slots',
     allNoticesLabel: 'Lihat Semua Notis',
     viewFullGalleryLabel: 'Galeri Infografik Penuh',
   },

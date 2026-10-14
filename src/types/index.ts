@@ -160,6 +160,8 @@ export interface PortalSettings {
     infographicsSubtitle?: string;
     announcementsTitle?: string;
     announcementsSubtitle?: string;
+    scheduleTitle?: string;
+    scheduleSubtitle?: string;
     allNoticesLabel?: string;
     viewFullGalleryLabel?: string;
   };

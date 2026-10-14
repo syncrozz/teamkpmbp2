@@ -145,7 +145,6 @@ const APP_TABS = [
   { id: 'schedule', label: 'Timeline (Jadual & Kronologi)' },
   { id: 'travel', label: 'Travel & Accommodation (Penginapan & Bas)' },
   { id: 'documents', label: 'Documents & Downloads (Buku & Borang)' },
-  { id: 'topics', label: 'Topics Section (Topik Terperinci)' },
 ];
 
 export const QuickAccess: React.FC = () => {

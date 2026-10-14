@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { ScheduleItem } from '../../types';
@@ -25,6 +25,7 @@ export const ScheduleList: React.FC = () => {
     deleteSchedule,
     events,
     settings,
+    updateSettings,
     searchQuery,
   } = useApp();
   const { isAdminMode } = useAuth();
@@ -34,10 +35,10 @@ export const ScheduleList: React.FC = () => {
 
   // Form state
   const [newTitle, setNewTitle] = useState('');
-  const [newDate, setNewDate] = useState('14 Oct 2026');
-  const [newStartTime, setNewStartTime] = useState('09:00 AM');
-  const [newEndTime, setNewEndTime] = useState('10:30 AM');
-  const [newVenue, setNewVenue] = useState('Main Auditorium');
+  const [newDate, setNewDate] = useState('14 Okt 2026');
+  const [newStartTime, setNewStartTime] = useState('08:30 AM');
+  const [newEndTime, setNewEndTime] = useState('10:00 AM');
+  const [newVenue, setNewVenue] = useState('Stadium Utama SOAR IPMA');
   const [newDesc, setNewDesc] = useState('');
   const [newEventId, setNewEventId] = useState('');
 
@@ -49,7 +50,12 @@ export const ScheduleList: React.FC = () => {
 
   const parseDateToComparable = (dateStr: string): number => {
     if (!dateStr) return 0;
-    const parts = dateStr.trim().toLowerCase().split(/\s+/);
+    const clean = dateStr.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+      const [y, m, d] = clean.split('-').map(Number);
+      return new Date(y, m - 1, d).getTime();
+    }
+    const parts = clean.toLowerCase().split(/\s+/);
     if (parts.length >= 3) {
       const day = parseInt(parts[0], 10) || 1;
       const monthKey = parts[1].slice(0, 3);
@@ -57,16 +63,24 @@ export const ScheduleList: React.FC = () => {
       const year = parseInt(parts[2], 10) || 2026;
       return new Date(year, month - 1, day).getTime();
     }
-    const timestamp = Date.parse(dateStr);
+    const timestamp = Date.parse(clean);
     return isNaN(timestamp) ? 0 : timestamp;
   };
 
   const parseTimeToMinutes = (timeStr: string): number => {
     if (!timeStr) return 0;
-    const clean = timeStr.trim().toLowerCase();
+    // If range like "08:00 AM – 10:00 AM" was stored, take starting time
+    const firstPart = timeStr.split(/[-–—]/)[0] || timeStr;
+    const clean = firstPart.trim().toLowerCase();
 
-    const isPM = clean.includes('pm') || clean.includes('ptg') || clean.includes('petang') || clean.includes('malam');
-    const isAM = clean.includes('am') || clean.includes('pagi');
+    const isPM =
+      clean.includes('pm') ||
+      clean.includes('ptg') ||
+      clean.includes('petang') ||
+      clean.includes('malam') ||
+      clean.includes('tgh') ||
+      clean.includes('tengahari');
+    const isAM = clean.includes('am') || clean.includes('pagi') || clean.includes('subuh');
 
     const match = clean.match(/(\d{1,2})[:.](\d{2})/) || clean.match(/(\d{1,2})/);
     if (!match) return 0;
@@ -83,57 +97,23 @@ export const ScheduleList: React.FC = () => {
     return hours * 60 + minutes;
   };
 
-  const TIME_OPTIONS = [
-    '06:00 AM', '06:30 AM', '07:00 AM', '07:15 AM', '07:30 AM', '07:45 AM',
-    '08:00 AM', '08:15 AM', '08:30 AM', '08:45 AM',
-    '09:00 AM', '09:15 AM', '09:30 AM', '09:45 AM',
-    '10:00 AM', '10:15 AM', '10:30 AM', '10:45 AM',
-    '11:00 AM', '11:15 AM', '11:30 AM', '11:45 AM',
-    '12:00 PM', '12:15 PM', '12:30 PM', '12:45 PM',
-    '01:00 PM', '01:15 PM', '01:30 PM', '01:45 PM',
-    '02:00 PM', '02:15 PM', '02:30 PM', '02:45 PM',
-    '03:00 PM', '03:15 PM', '03:30 PM', '03:45 PM',
-    '04:00 PM', '04:15 PM', '04:30 PM', '04:45 PM',
-    '05:00 PM', '05:15 PM', '05:30 PM', '05:45 PM',
-    '06:00 PM', '06:15 PM', '06:30 PM', '06:45 PM',
-    '07:00 PM', '07:15 PM', '07:30 PM', '07:45 PM',
-    '08:00 PM', '08:15 PM', '08:30 PM', '08:45 PM',
-    '09:00 PM', '09:15 PM', '09:30 PM', '09:45 PM',
-    '10:00 PM', '10:30 PM', '11:00 PM', '11:30 PM',
-  ];
-
-  const DEFAULT_EVENT_DATES = [
-    '13 Okt 2026',
-    '14 Okt 2026',
-    '15 Okt 2026',
-    '16 Okt 2026',
-    '17 Okt 2026',
-  ];
-
-  const time24To12 = (time24: string): string => {
-    if (!time24) return '';
-    const [hStr, mStr] = time24.split(':');
-    let h = parseInt(hStr, 10);
-    const m = mStr || '00';
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12;
-    if (h === 0) h = 12;
-    return `${String(h).padStart(2, '0')}:${m} ${ampm}`;
-  };
-
-  const time12To24 = (time12: string): string => {
-    if (!time12) return '09:00';
-    const clean = time12.trim().toLowerCase();
-    const isPM = clean.includes('pm') || clean.includes('ptg') || clean.includes('petang') || clean.includes('malam');
-    const isAM = clean.includes('am') || clean.includes('pagi');
-    const match = clean.match(/(\d{1,2})[:.](\d{2})/);
-    if (!match) return '09:00';
-    let h = parseInt(match[1], 10);
-    const m = match[2];
-    if (isPM && h < 12) h += 12;
-    if (isAM && h === 12) h = 0;
-    return `${String(h).padStart(2, '0')}:${m}`;
-  };
+  // Generate standardized, deduplicated 15-minute time slots from 06:00 AM to 11:30 PM
+  const TIME_OPTIONS: string[] = useMemo(() => {
+    const list: string[] = [];
+    for (let h = 6; h <= 23; h++) {
+      for (const m of ['00', '15', '30', '45']) {
+        if (h === 23 && m === '45') continue;
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        let displayH = h % 12;
+        if (displayH === 0) displayH = 12;
+        const formatted = `${String(displayH).padStart(2, '0')}:${m} ${ampm}`;
+        if (!list.includes(formatted)) {
+          list.push(formatted);
+        }
+      }
+    }
+    return list;
+  }, []);
 
   const dateIsoToMalay = (isoStr: string): string => {
     if (!isoStr) return '';
@@ -169,18 +149,21 @@ export const ScheduleList: React.FC = () => {
     return '2026-10-14';
   };
 
-  // Collect distinct dates sorted chronologically for filter tabs and dropdown
-  const rawDates = Array.from(new Set(schedules.map((s) => s.date).filter(Boolean)));
+  // Deduplicate schedules by id to prevent any double item rendering
+  const deduplicatedSchedules = useMemo(() => {
+    const map = new Map<string, ScheduleItem>();
+    for (const item of schedules) {
+      if (item && item.id) {
+        map.set(item.id, item);
+      }
+    }
+    return Array.from(map.values());
+  }, [schedules]);
+
+  // Collect distinct dates sorted chronologically for filter tabs
+  const rawDates = Array.from(new Set(deduplicatedSchedules.map((s) => s.date).filter(Boolean)));
   rawDates.sort((a, b) => parseDateToComparable(a) - parseDateToComparable(b));
   const dates = ['all', ...rawDates];
-
-  const eventDatesList = Array.from(
-    new Set([
-      ...DEFAULT_EVENT_DATES,
-      ...rawDates,
-    ])
-  );
-  eventDatesList.sort((a, b) => parseDateToComparable(a) - parseDateToComparable(b));
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -203,7 +186,7 @@ export const ScheduleList: React.FC = () => {
     setIsAdding(false);
   };
 
-  const filtered = schedules.filter((item) => {
+  const filtered = deduplicatedSchedules.filter((item) => {
     if (!isAdminMode && item.status !== 'published') return false;
     if (selectedDateFilter !== 'all' && item.date !== selectedDateFilter) return false;
     if (searchQuery.trim()) {
@@ -218,9 +201,9 @@ export const ScheduleList: React.FC = () => {
   });
 
   // Sort schedule slots strictly by chronological time:
-  // 1st is the earliest (paling awal), and last at the bottom is the latest (paling lewat) on that day
+  // 1st (paling atas) is the earliest (paling awal), and last (di senarai bawah) is the latest (paling lewat) on that day
   const sortedSchedules = [...filtered].sort((a, b) => {
-    // 1. If viewing all dates, order by date first
+    // 1. If viewing all dates, order by calendar date first
     if (selectedDateFilter === 'all') {
       const dateA = parseDateToComparable(a.date);
       const dateB = parseDateToComparable(b.date);
@@ -236,7 +219,7 @@ export const ScheduleList: React.FC = () => {
       return timeA - timeB;
     }
 
-    // 3. Secondary sort by endTime
+    // 3. Secondary sort by endTime: earliest ending to latest ending
     const endA = parseTimeToMinutes(a.endTime);
     const endB = parseTimeToMinutes(b.endTime);
     if (endA !== endB) {
@@ -249,14 +232,40 @@ export const ScheduleList: React.FC = () => {
 
   return (
     <div className="space-y-5">
+      {/* Header section with admin inline editable title and subtitle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-            Contingent Master Schedule & Itinerary
+            <InlineEdit
+              value={settings.sectionTitles?.scheduleTitle || 'Contingent Master Schedule & Itinerary'}
+              onSave={(val) =>
+                updateSettings({
+                  sectionTitles: {
+                    ...settings.sectionTitles,
+                    scheduleTitle: val,
+                  },
+                })
+              }
+              as="span"
+            />
           </h2>
-          <p className="text-xs text-slate-500">
-            Chronological timetable, sound checks, ceremony calls and competition slots
-          </p>
+          <div className="text-xs text-slate-500">
+            <InlineEdit
+              value={
+                settings.sectionTitles?.scheduleSubtitle ||
+                'Chronological timetable, sound checks, ceremony calls and competition slots'
+              }
+              onSave={(val) =>
+                updateSettings({
+                  sectionTitles: {
+                    ...settings.sectionTitles,
+                    scheduleSubtitle: val,
+                  },
+                })
+              }
+              as="p"
+            />
+          </div>
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
@@ -280,7 +289,7 @@ export const ScheduleList: React.FC = () => {
           <button
             key={d}
             onClick={() => setSelectedDateFilter(d)}
-            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
+            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
               selectedDateFilter === d
                 ? 'bg-slate-900 text-white font-medium shadow-xs'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
@@ -302,7 +311,7 @@ export const ScheduleList: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsAdding(false)}
-              className="text-slate-400 hover:text-slate-600"
+              className="text-slate-400 hover:text-slate-600 cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -330,7 +339,7 @@ export const ScheduleList: React.FC = () => {
               <select
                 value={newEventId}
                 onChange={(e) => setNewEventId(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900"
+                className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900 cursor-pointer"
               >
                 <option value="">No linked event</option>
                 {events.map((ev) => (
@@ -342,15 +351,13 @@ export const ScheduleList: React.FC = () => {
             </div>
           </div>
 
+          {/* Form row with single clean display for each date and time field */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Column 1: Tarikh dari Kalendar */}
+            {/* Column 1: Tarikh dari Kalendar (Calendar Picker) */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Tarikh (Date)</span>
-                </span>
-                <span className="text-[10px] text-blue-600 font-semibold">{newDate}</span>
+              <label className="block text-xs font-medium text-slate-700 mb-1 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                <span>Tarikh (Date) *</span>
               </label>
               <input
                 type="date"
@@ -360,23 +367,22 @@ export const ScheduleList: React.FC = () => {
                     setNewDate(dateIsoToMalay(e.target.value));
                   }
                 }}
+                required
                 className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900 cursor-pointer"
-                title="Pilih tarikh dari kalendar"
+                title="Pilih tarikh daripada kalendar"
               />
             </div>
 
-            {/* Column 2: Masa Mula dari Senarai Drop Down */}
+            {/* Column 2: Masa Mula dari Senarai Drop Down (Dropdown Time Picker) */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Masa Mula (Start)</span>
-                </span>
-                <span className="text-[10px] text-blue-600 font-mono font-semibold">{newStartTime}</span>
+              <label className="block text-xs font-medium text-slate-700 mb-1 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-blue-600" />
+                <span>Masa Mula (Start) *</span>
               </label>
               <select
                 value={newStartTime}
                 onChange={(e) => setNewStartTime(e.target.value)}
+                required
                 className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900 cursor-pointer font-mono"
                 title="Pilih masa mula daripada senarai drop down"
               >
@@ -391,18 +397,16 @@ export const ScheduleList: React.FC = () => {
               </select>
             </div>
 
-            {/* Column 3: Masa Tamat dari Senarai Drop Down */}
+            {/* Column 3: Masa Tamat dari Senarai Drop Down (Dropdown Time Picker) */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Masa Tamat (End)</span>
-                </span>
-                <span className="text-[10px] text-blue-600 font-mono font-semibold">{newEndTime}</span>
+              <label className="block text-xs font-medium text-slate-700 mb-1 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-slate-500" />
+                <span>Masa Tamat (End) *</span>
               </label>
               <select
                 value={newEndTime}
                 onChange={(e) => setNewEndTime(e.target.value)}
+                required
                 className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900 cursor-pointer font-mono"
                 title="Pilih masa tamat daripada senarai drop down"
               >
@@ -449,13 +453,13 @@ export const ScheduleList: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsAdding(false)}
-              className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900 rounded-lg"
+              className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900 rounded-lg cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm"
+              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm cursor-pointer"
             >
               Add Slot
             </button>
@@ -476,9 +480,9 @@ export const ScheduleList: React.FC = () => {
         </div>
       )}
 
-      {/* Timeline Rows */}
+      {/* Timeline Rows sorted strictly by time: earliest 1st at the top, latest last at the bottom */}
       <div className="space-y-3">
-        {sortedSchedules.map((item) => {
+        {sortedSchedules.map((item, index) => {
           const associatedEvent = events.find((e) => e.id === item.associatedEventId);
 
           return (
@@ -490,13 +494,16 @@ export const ScheduleList: React.FC = () => {
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-start gap-3.5 flex-1 min-w-0">
-                  {/* Time Badge (Tabular Numerals) */}
-                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-center shrink-0 min-w-[90px]">
+                  {/* Time Badge with Chronological Slot Indicator */}
+                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-center shrink-0 min-w-[95px]">
                     <span className="block text-[11px] font-semibold text-slate-500 uppercase">
                       {item.date}
                     </span>
                     <span className="block text-xs font-bold font-mono tabular-nums text-slate-900 mt-0.5">
                       {item.startTime}
+                    </span>
+                    <span className="inline-block mt-1 px-1.5 py-0.5 text-[9px] font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded">
+                      Slot #{index + 1}
                     </span>
                   </div>
 
@@ -529,7 +536,7 @@ export const ScheduleList: React.FC = () => {
                         <InlineEdit
                           value={`${item.startTime} – ${item.endTime}`}
                           onSave={(val) => {
-                            const parts = val.split('–').map((p) => p.trim());
+                            const parts = val.split(/[-–—]/).map((p) => p.trim());
                             updateSchedule(item.id, {
                               startTime: parts[0] || item.startTime,
                               endTime: parts[1] || item.endTime,
@@ -570,7 +577,7 @@ export const ScheduleList: React.FC = () => {
                       onClick={() =>
                         updateSchedule(item.id, { isUpdated: !item.isUpdated })
                       }
-                      className={`p-1.5 rounded-md text-xs font-medium transition-colors ${
+                      className={`p-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                         item.isUpdated
                           ? 'text-amber-700 bg-amber-100'
                           : 'text-slate-400 hover:text-slate-700'
@@ -585,7 +592,7 @@ export const ScheduleList: React.FC = () => {
                           status: item.status === 'published' ? 'draft' : 'published',
                         })
                       }
-                      className="p-1.5 text-slate-400 hover:text-slate-700 rounded-md"
+                      className="p-1.5 text-slate-400 hover:text-slate-700 rounded-md cursor-pointer"
                       title={item.status === 'published' ? 'Hide item' : 'Publish item'}
                     >
                       {item.status === 'published' ? (
@@ -600,7 +607,7 @@ export const ScheduleList: React.FC = () => {
                           deleteSchedule(item.id);
                         }
                       }}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 rounded-md"
+                      className="p-1.5 text-slate-400 hover:text-rose-600 rounded-md cursor-pointer"
                       title="Delete schedule item"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

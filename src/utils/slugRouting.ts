@@ -63,8 +63,8 @@ export const TAB_FROM_SLUG: Record<string, string> = {
   travel: 'travel',
   dokumen: 'documents',
   documents: 'documents',
-  topik: 'topics',
-  topics: 'topics',
+  topik: 'home',
+  topics: 'home',
 };
 
 /**

@@ -8,7 +8,6 @@ import {
   Image as ImageIcon,
   Menu,
   Calendar,
-  Compass,
   FileText,
   Bus,
   Shield,
@@ -67,7 +66,7 @@ export const BottomNav: React.FC = () => {
           <button
             onClick={() => setIsMoreOpen(true)}
             className={`flex flex-col items-center justify-center min-h-[44px] min-w-0 w-full py-1 transition-colors cursor-pointer ${
-              isMoreOpen || ['schedule', 'travel', 'documents', 'topics'].includes(activeTab)
+              isMoreOpen || ['schedule', 'travel', 'documents'].includes(activeTab)
                 ? 'text-blue-600 font-semibold'
                 : 'text-slate-500 hover:text-slate-900'
             }`}
@@ -154,24 +153,6 @@ export const BottomNav: React.FC = () => {
                   <div className="text-left">
                     <p className="text-sm font-medium">{settings.navLabels?.['documents'] || 'Official Documents'}</p>
                     <p className="text-xs text-slate-500">Rulebooks & Consent Forms</p>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-400" />
-              </button>
-
-              <button
-                onClick={() => handleTabClick('topics')}
-                className={`w-full flex items-center justify-between p-3 rounded-xl transition-colors ${
-                  activeTab === 'topics' ? 'bg-blue-50 text-blue-700' : 'hover:bg-slate-50 text-slate-800'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-slate-100 rounded-lg text-slate-700">
-                    <Compass className="w-4 h-4" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-sm font-medium">Topics & Guidelines</p>
-                    <p className="text-xs text-slate-500">Briefings, Welfare & Protocols</p>
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-400" />

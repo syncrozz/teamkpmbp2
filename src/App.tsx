@@ -14,7 +14,7 @@ import { HeroBanner } from './components/home/HeroBanner';
 import { QuickAccess } from './components/home/QuickAccess';
 import { AnnouncementList } from './components/announcements/AnnouncementList';
 import { InfographicGallery } from './components/infographics/InfographicGallery';
-import { TopicSection } from './components/topics/TopicSection';
+
 import { ScheduleList } from './components/schedule/ScheduleList';
 import { TravelAccommodation } from './components/travel/TravelAccommodation';
 import { DocumentList } from './components/documents/DocumentList';
@@ -39,6 +39,13 @@ const MainContent: React.FC = () => {
   // Ref to always access the latest activeTab without re-subscribing or looping
   const activeTabRef = useRef(activeTab);
   activeTabRef.current = activeTab;
+
+  // Fallback if user previously had topics tab active
+  useEffect(() => {
+    if (activeTab === 'topics') {
+      setActiveTab('home');
+    }
+  }, [activeTab, setActiveTab]);
 
   // Listen to hash changes in browser URL (slug deep-linking & smooth scroll)
   useEffect(() => {
@@ -258,11 +265,7 @@ const MainContent: React.FC = () => {
           </section>
         )}
 
-        {activeTab === 'topics' && (
-          <section id="topik" className="scroll-mt-20">
-            <TopicSection />
-          </section>
-        )}
+
       </main>
 
       {/* Footer (Editable in Admin Mode) */}
