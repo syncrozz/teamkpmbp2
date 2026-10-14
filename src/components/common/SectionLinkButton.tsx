@@ -16,7 +16,7 @@ export const SectionLinkButton: React.FC<SectionLinkButtonProps> = ({
   slug,
   sectionKey,
   titleForAutoSlug,
-  label = 'Salin Link',
+  label,
   className = '',
 }) => {
   const { isAdminMode } = useAuth();
@@ -60,6 +60,7 @@ export const SectionLinkButton: React.FC<SectionLinkButtonProps> = ({
         type="button"
         onClick={handleCopy}
         title={`Salin pautan terus bahagian ini (#${currentSlug})`}
+        aria-label={`Salin pautan terus #${currentSlug}`}
         className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg border transition-all cursor-pointer font-medium ${
           copied
             ? 'bg-emerald-50 border-emerald-300 text-emerald-700 shadow-2xs'
@@ -69,13 +70,13 @@ export const SectionLinkButton: React.FC<SectionLinkButtonProps> = ({
         {copied ? (
           <>
             <Check className="w-3.5 h-3.5 text-emerald-600" />
-            <span className="text-emerald-700 font-semibold">Disalin!</span>
+            <span className="text-emerald-700 font-semibold text-xs">Disalin!</span>
           </>
         ) : (
           <>
             <LinkIcon className="w-3.5 h-3.5 text-blue-600" />
-            <span>{label}</span>
-            <span className="text-[10px] text-slate-400 font-mono">#{currentSlug}</span>
+            {label && <span>{label}</span>}
+            <span className="text-[10px] text-slate-500 font-mono">#{currentSlug}</span>
           </>
         )}
       </button>

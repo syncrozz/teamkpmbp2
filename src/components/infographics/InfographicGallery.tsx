@@ -24,7 +24,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { copySectionDirectLink, updatePageOGIMeta } from '../../utils/slugRouting';
+import { updatePageOGIMeta } from '../../utils/slugRouting';
 import { storage, isFirebaseConfigured, auth } from '../../lib/firebase';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
@@ -677,23 +677,9 @@ export const InfographicGallery: React.FC<InfographicGalleryProps> = ({
               </>
             )}
 
-            {/* Action buttons: Salin Link & Muat Naik Poster */}
-            <div className="ml-auto flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  copySectionDirectLink('infografik');
-                  setCopyNotice('Pautan terus Infografik & Poster (#infografik) berjaya disalin!');
-                  setTimeout(() => setCopyNotice(null), 2500);
-                }}
-                className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs flex items-center gap-1 transition-colors shadow-2xs cursor-pointer"
-                title="Salin pautan terus untuk bahagian ini (Slug: #infografik)"
-              >
-                <LinkIcon className="w-3.5 h-3.5 text-blue-600" />
-                <span className="hidden sm:inline">Salin Link</span>
-              </button>
-
-              {isAdminMode && !showHeader && (
+            {/* Action buttons: Muat Naik Poster (Admin) */}
+            {isAdminMode && !showHeader && (
+              <div className="ml-auto flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setIsUploadModalOpen(true)}
@@ -702,8 +688,8 @@ export const InfographicGallery: React.FC<InfographicGalleryProps> = ({
                   <Upload className="w-3.5 h-3.5" />
                   <span>Muat Naik Poster</span>
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Admin Tag Management Helper Info */}
@@ -833,19 +819,6 @@ export const InfographicGallery: React.FC<InfographicGalleryProps> = ({
                       as="p"
                     />
                   </div>
-
-                  {/* Clean unboxed tags */}
-                  {item.tags && item.tags.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px] text-slate-400">
-                      <Tag className="w-3 h-3 text-slate-400" />
-                      {item.tags.map((tag, tIdx) => (
-                        <span key={tIdx} className="text-slate-600">
-                          #{tag}
-                          {tIdx < item.tags.length - 1 && <span className="ml-1 text-slate-300">·</span>}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
 

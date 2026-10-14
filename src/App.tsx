@@ -156,12 +156,6 @@ const MainContent: React.FC = () => {
                     />
                   </h2>
                 </div>
-
-                <SectionLinkButton
-                  slug="infografik"
-                  sectionKey="infografik"
-                  titleForAutoSlug={settings.sectionTitles?.infographicsTitle || 'Infographics & Venue Maps'}
-                />
               </div>
 
               <InfographicGallery showHeader={false} />
