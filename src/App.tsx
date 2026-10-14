@@ -29,8 +29,10 @@ import {
   getEffectiveSlug,
 } from './utils/slugRouting';
 import { SectionLinkButton } from './components/common/SectionLinkButton';
+import { useBrandingMeta } from './hooks/useBrandingMeta';
 
 const MainContent: React.FC = () => {
+  useBrandingMeta();
   const { isAdminMode } = useAuth();
   const { activeTab, setActiveTab, settings, updateSettings, infographics, announcements } = useApp();
 

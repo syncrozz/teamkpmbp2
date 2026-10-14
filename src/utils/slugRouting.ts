@@ -243,10 +243,10 @@ export function updatePageOGIMeta(params: {
 }) {
   if (typeof document === 'undefined') return;
 
-  const title = params.title || 'Rujukan Team — SYNCROZZ KPMBP Contingent Hub';
+  const title = params.title || 'Team KPMBP — SYNCROZZ Contingent Hub';
   const description =
     params.description ||
-    'Portal rujukan pantas dan maklumat rasmi kontinjen KPMBP ke SOAR IPMA 2026.';
+    'Portal rujukan pantas dan maklumat rasmi kontinjen Team KPMBP ke SOAR IPMA 2026.';
 
   document.title = title;
 

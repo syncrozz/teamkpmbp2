@@ -5,11 +5,8 @@
  * SYNCROZZ BRANDING & ASSET CONFIGURATION ARCHITECTURE
  * Centralized Single Source of Truth for Platform Assets & Identity.
  *
- * STANDARD:
- * - Function First + Architecture Ready + Asset Ready + Easy Swap + No Fabrication.
- * - When official assets (Logo, App Icon, OGI, Favicon) are provided, update this file ONLY.
- * - All consumers (HTML head, PWA manifest, UI components, social cards) read from here.
- * - Zero structural rebuild or business logic edits required upon asset replacement.
+ * Official Asset Source:
+ * https://raw.githubusercontent.com/syncrozz/syncrozz-assets/main/logo/TeamKPMBP/
  */
 
 export interface BrandingAssetConfig {
@@ -20,34 +17,36 @@ export interface BrandingAssetConfig {
   themeColor: string;
   backgroundColor: string;
 
-  // Central Asset References (null = Pending / Not yet provided by user)
+  // Central Asset References (Authoritative remote URLs with local fallback in public/)
   logoUrl: string | null;
   appIconUrl: string | null;
   faviconUrl: string | null;
   pwaIcon192Url: string | null;
   pwaIcon512Url: string | null;
   appleTouchIconUrl: string | null;
-  ogImageUrl: string | null; // Central OGI reference: empty until official asset provided
+  ogImageUrl: string | null;
 }
+
+export const AUTHORITATIVE_ASSET_BASE_URL =
+  'https://raw.githubusercontent.com/syncrozz/syncrozz-assets/main/logo/TeamKPMBP';
 
 export const BRANDING_CONFIG: BrandingAssetConfig = {
   // Platform Identity
-  platformName: 'SYNCROZZ KPMBP Contingent Hub',
-  platformShortName: 'Rujukan Team',
+  platformName: 'SYNCROZZ Team KPMBP Contingent Hub',
+  platformShortName: 'Team KPMBP',
   platformDescription:
     'Mobile-first public information portal for KPMBP participants attending SOAR IPMA 2026 with real-time announcements, schedules, and operational guidelines.',
-  themeColor: '#2563eb', // Contingent Blue
+  themeColor: '#e60020', // Official Team KPMBP Red
   backgroundColor: '#ffffff',
 
-  // Official Branding Assets
-  // STATUS: Pending Official Provision (Set direct URL or path when provided by user)
-  logoUrl: null, // e.g. '/assets/branding/logo.png' or direct remote asset URL
-  appIconUrl: null, // e.g. '/assets/branding/app-icon.png'
-  faviconUrl: '/favicon.ico', // Standard favicon integration point
-  pwaIcon192Url: '/icons/icon-192.png', // PWA 192x192 integration point
-  pwaIcon512Url: '/icons/icon-512.png', // PWA 512x512 integration point
-  appleTouchIconUrl: '/icons/apple-touch-icon.png', // iOS Safari 180x180 integration point
-  ogImageUrl: null, // OGI Central Reference: Pending official asset (No fake OGI)
+  // Official Branding Assets from https://raw.githubusercontent.com/syncrozz/syncrozz-assets/main/logo/TeamKPMBP/
+  logoUrl: `${AUTHORITATIVE_ASSET_BASE_URL}/web-app-manifest-512x512.png`,
+  appIconUrl: `${AUTHORITATIVE_ASSET_BASE_URL}/android-chrome-512x512.png`,
+  faviconUrl: '/favicon.svg',
+  pwaIcon192Url: `${AUTHORITATIVE_ASSET_BASE_URL}/android-chrome-192x192.png`,
+  pwaIcon512Url: `${AUTHORITATIVE_ASSET_BASE_URL}/android-chrome-512x512.png`,
+  appleTouchIconUrl: `${AUTHORITATIVE_ASSET_BASE_URL}/apple-touch-icon.png`,
+  ogImageUrl: `${AUTHORITATIVE_ASSET_BASE_URL}/web-app-manifest-512x512.png`,
 };
 
 /**

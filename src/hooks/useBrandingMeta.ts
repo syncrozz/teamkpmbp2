@@ -3,8 +3,8 @@ import { BRANDING_CONFIG } from '../config/branding';
 
 /**
  * SYNCROZZ CENTRAL BRANDING & SEO SYNCHRONIZATION HOOK
- * Ensures document head, Open Graph, Twitter cards, and PWA Service Worker
- * stay 100% in sync with BRANDING_CONFIG without manual scattered edits.
+ * Ensures document head, Open Graph, Twitter cards, Apple touch icons, Microsoft tile,
+ * and PWA Service Worker stay 100% in sync with BRANDING_CONFIG and official Team KPMBP assets.
  */
 export function useBrandingMeta() {
   useEffect(() => {
@@ -35,7 +35,7 @@ export function useBrandingMeta() {
       }
       if (!element) {
         element = document.createElement('link');
-        element.setAttribute('rel', rel);
+        element.setAttribute(rel, rel);
         document.head.appendChild(element);
       }
       element.setAttribute('href', href);
@@ -52,6 +52,8 @@ export function useBrandingMeta() {
     setMetaTag('name', 'apple-mobile-web-app-capable', 'yes');
     setMetaTag('name', 'mobile-web-app-capable', 'yes');
     setMetaTag('name', 'apple-mobile-web-app-status-bar-style', 'default');
+    setMetaTag('name', 'msapplication-TileColor', BRANDING_CONFIG.themeColor);
+    setMetaTag('name', 'msapplication-TileImage', '/mstile-150x150.png');
 
     // 5. OpenGraph & Twitter Cards
     setMetaTag('property', 'og:title', BRANDING_CONFIG.platformName);
@@ -65,23 +67,19 @@ export function useBrandingMeta() {
     setMetaTag('name', 'twitter:title', BRANDING_CONFIG.platformName);
     setMetaTag('name', 'twitter:description', BRANDING_CONFIG.platformDescription);
 
-    // 6. Central OGI Integration (Section 6)
-    // If ogImageUrl is set, inject og:image & twitter:image; if pending/null, omit cleanly without fake image
+    // 6. Central OGI Integration
     if (BRANDING_CONFIG.ogImageUrl) {
       setMetaTag('property', 'og:image', BRANDING_CONFIG.ogImageUrl);
       setMetaTag('name', 'twitter:image', BRANDING_CONFIG.ogImageUrl);
-    } else {
-      setMetaTag('property', 'og:image', null);
-      setMetaTag('name', 'twitter:image', null);
     }
 
     // 7. Icons & Manifest Links
-    setLinkTag('manifest', '/manifest.json');
+    setLinkTag('manifest', '/site.webmanifest');
     if (BRANDING_CONFIG.faviconUrl) {
-      setLinkTag('icon', BRANDING_CONFIG.faviconUrl);
+      setLinkTag('icon', BRANDING_CONFIG.faviconUrl, { type: 'image/svg+xml' });
     }
     if (BRANDING_CONFIG.appleTouchIconUrl) {
-      setLinkTag('apple-touch-icon', BRANDING_CONFIG.appleTouchIconUrl);
+      setLinkTag('apple-touch-icon', BRANDING_CONFIG.appleTouchIconUrl, { sizes: '180x180' });
     }
 
     // 8. Service Worker Registration for Offline Resilience

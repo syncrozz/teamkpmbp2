@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BRANDING_CONFIG } from '../../config/branding';
 
 interface PlatformLogoProps {
@@ -10,41 +10,52 @@ interface PlatformLogoProps {
 
 /**
  * SYNCROZZ PLATFORM LOGO ARCHITECTURE
- * - If official logoUrl is set in BRANDING_CONFIG, displays official logo.
- * - If logoUrl is null (pending), renders a clean, neutral typography mark.
- * - When official logo is provided later, plug into BRANDING_CONFIG.logoUrl with ZERO rebuild.
+ * - Renders official Team KPMBP logo with fallback to local public asset and typography.
+ * - Respects aspect ratio and displays high-fidelity crest alongside platform identity.
  */
 export const PlatformLogo: React.FC<PlatformLogoProps> = ({
   className = '',
-  imgClassName = 'h-8 w-auto object-contain',
+  imgClassName = 'h-8 sm:h-9 w-auto object-contain shrink-0',
   size = 'md',
 }) => {
-  // If official logo is provided, render the official asset
-  if (BRANDING_CONFIG.logoUrl) {
-    return (
-      <div className={`flex items-center gap-2 ${className}`}>
-        <img
-          src={BRANDING_CONFIG.logoUrl}
-          alt={BRANDING_CONFIG.platformName}
-          className={imgClassName}
-        />
-      </div>
-    );
-  }
+  const [imgError, setImgError] = useState(false);
+  const [fallbackAttempted, setFallbackAttempted] = useState(false);
+  const [src, setSrc] = useState(BRANDING_CONFIG.logoUrl || '/web-app-manifest-512x512.png');
 
-  // Safe, clean neutral typography fallback (Non-fabricated)
+  const handleImageError = () => {
+    if (!fallbackAttempted && src !== '/web-app-manifest-512x512.png') {
+      setFallbackAttempted(true);
+      setSrc('/web-app-manifest-512x512.png');
+    } else {
+      setImgError(true);
+    }
+  };
+
   const textSize =
     size === 'lg'
       ? 'text-lg sm:text-xl'
       : size === 'sm'
-        ? 'text-sm'
-        : 'text-base sm:text-lg';
+        ? 'text-xs sm:text-sm'
+        : 'text-sm sm:text-base';
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <span className={`${textSize} font-bold tracking-tight text-slate-900 whitespace-nowrap`}>
-        {BRANDING_CONFIG.platformShortName}
-      </span>
+    <div className={`flex items-center gap-2.5 ${className}`}>
+      {!imgError && (
+        <img
+          src={src}
+          alt={BRANDING_CONFIG.platformName}
+          className={imgClassName}
+          onError={handleImageError}
+        />
+      )}
+      <div className="flex flex-col min-w-0">
+        <span className={`${textSize} font-bold tracking-tight text-slate-900 truncate leading-tight`}>
+          {BRANDING_CONFIG.platformShortName}
+        </span>
+        <span className="text-[10px] text-slate-500 font-medium tracking-normal hidden sm:inline leading-none mt-0.5">
+          Kontinjen SOAR IPMA 2026
+        </span>
+      </div>
     </div>
   );
 };

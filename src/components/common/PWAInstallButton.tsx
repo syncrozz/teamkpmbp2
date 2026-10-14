@@ -27,10 +27,10 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
         onClick={install}
         className={`min-h-[36px] px-3 py-1.5 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-all shadow-xs cursor-pointer ${
           variant === 'drawer'
-            ? 'w-full justify-center bg-blue-600 hover:bg-blue-700 text-white'
-            : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
+            ? 'w-full justify-center bg-red-600 hover:bg-red-700 text-white'
+            : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
         } ${className}`}
-        title="Pasang aplikasi ini di telefon atau desktop anda"
+        title="Pasang aplikasi Team KPMBP di telefon atau desktop anda"
       >
         <Download className="w-3.5 h-3.5" />
         <span>Pasang Aplikasi</span>
@@ -58,14 +58,21 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
             <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-                    <Share2 className="w-4 h-4" />
+                  <div className="flex items-center gap-2">
+                    <img
+                      src="/apple-touch-icon.png"
+                      alt={BRANDING_CONFIG.platformShortName}
+                      className="w-9 h-9 rounded-xl shadow-xs border border-slate-200 object-contain shrink-0"
+                    />
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 leading-tight">
+                        Pasang di iPhone / iPad
+                      </h3>
+                      <p className="text-[11px] text-slate-500 font-medium">
+                        {BRANDING_CONFIG.platformShortName} PWA
+                      </p>
+                    </div>
                   </div>
-                  <h3 className="text-sm font-bold text-slate-900">
-                    Pasang di iPhone / iPad
-                  </h3>
-                </div>
                 <button
                   onClick={() => setShowIOSGuide(false)}
                   className="p-1 text-slate-400 hover:text-slate-600 rounded-md"
