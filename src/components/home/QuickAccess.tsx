@@ -142,7 +142,6 @@ const COLOR_MAP: Record<
 
 const APP_TABS = [
   { id: 'announcements', label: 'Announcements (Notis Rasmi)' },
-  { id: 'infographics', label: 'Posters & Maps (Peta & Infografik)' },
   { id: 'schedule', label: 'Timeline (Jadual & Kronologi)' },
   { id: 'travel', label: 'Travel & Accommodation (Penginapan & Bas)' },
   { id: 'documents', label: 'Documents & Downloads (Buku & Borang)' },

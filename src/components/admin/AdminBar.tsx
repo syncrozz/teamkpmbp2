@@ -34,7 +34,10 @@ export const AdminBar: React.FC = () => {
             <span>Notis Baru</span>
           </button>
           <button
-            onClick={() => setActiveTab('infographics')}
+            onClick={() => {
+              setActiveTab('home');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
             className="px-2.5 py-1 bg-emerald-900/80 hover:bg-emerald-800 text-emerald-100 rounded-lg text-[11px] font-medium flex items-center gap-1 transition-colors cursor-pointer"
           >
             <Plus className="w-3 h-3" />

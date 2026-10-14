@@ -515,18 +515,6 @@ export const InfographicGallery: React.FC<InfographicGalleryProps> = ({
                         <span className="text-indigo-600 font-medium">{associatedEvent.title}</span>
                       </>
                     )}
-                    {isAdminMode && (
-                      <>
-                        <span aria-hidden="true" className="text-slate-300">·</span>
-                        <span
-                          className={`uppercase font-bold text-[10px] ${
-                            item.status === 'published' ? 'text-emerald-600' : 'text-amber-600'
-                          }`}
-                        >
-                          {item.status}
-                        </span>
-                      </>
-                    )}
                   </div>
 
                   <h3 className="text-sm font-bold text-slate-900 leading-snug">

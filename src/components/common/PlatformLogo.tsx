@@ -17,7 +17,6 @@ interface PlatformLogoProps {
 export const PlatformLogo: React.FC<PlatformLogoProps> = ({
   className = '',
   imgClassName = 'h-8 w-auto object-contain',
-  showBadge = true,
   size = 'md',
 }) => {
   // If official logo is provided, render the official asset
@@ -29,11 +28,6 @@ export const PlatformLogo: React.FC<PlatformLogoProps> = ({
           alt={BRANDING_CONFIG.platformName}
           className={imgClassName}
         />
-        {showBadge && (
-          <span className="hidden sm:inline-block text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
-            SOAR 2026
-          </span>
-        )}
       </div>
     );
   }
@@ -51,11 +45,6 @@ export const PlatformLogo: React.FC<PlatformLogoProps> = ({
       <span className={`${textSize} font-bold tracking-tight text-slate-900 whitespace-nowrap`}>
         {BRANDING_CONFIG.platformShortName}
       </span>
-      {showBadge && (
-        <span className="hidden sm:inline-block text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
-          SOAR 2026
-        </span>
-      )}
     </div>
   );
 };

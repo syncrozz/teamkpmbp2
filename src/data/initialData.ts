@@ -22,15 +22,6 @@ export const defaultQuickAccessItems: QuickAccessItem[] = [
     colorTheme: 'amber',
   },
   {
-    id: 'infographics',
-    title: 'Posters & Maps',
-    desc: 'Venue maps, grids & guidelines',
-    targetType: 'tab',
-    targetValue: 'infographics',
-    iconName: 'Image',
-    colorTheme: 'indigo',
-  },
-  {
     id: 'schedule',
     title: 'Chronological Timeline',
     desc: 'Day-to-day slots & stage rehearsals',

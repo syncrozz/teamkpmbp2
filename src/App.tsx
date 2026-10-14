@@ -72,33 +72,6 @@ const MainContent: React.FC = () => {
                     />
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveTab('infographics');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>{settings.sectionTitles?.viewFullGalleryLabel || 'View Full Gallery'}</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                  {isAdminMode && (
-                    <InlineEdit
-                      value={settings.sectionTitles?.viewFullGalleryLabel || 'View Full Gallery'}
-                      onSave={(val) =>
-                        updateSettings({
-                          sectionTitles: {
-                            ...settings.sectionTitles,
-                            viewFullGalleryLabel: val,
-                          },
-                        })
-                      }
-                      onlyIcon
-                    />
-                  )}
-                </div>
               </div>
 
               <InfographicGallery showHeader={false} />
@@ -176,8 +149,6 @@ const MainContent: React.FC = () => {
         )}
 
         {activeTab === 'announcements' && <AnnouncementList />}
-
-        {activeTab === 'infographics' && <InfographicGallery />}
 
         {activeTab === 'schedule' && <ScheduleList />}
 

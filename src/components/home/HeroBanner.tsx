@@ -71,8 +71,6 @@ export const HeroBanner: React.FC = () => {
                 as="span"
               />
               <span aria-hidden="true" className="text-slate-300">·</span>
-              <span className="text-slate-600 font-medium">SOAR IPMA National Convention</span>
-              <span aria-hidden="true" className="text-slate-300">·</span>
               <div className="flex items-center gap-1 text-[11px] text-slate-400">
                 <Clock className="w-3 h-3" />
                 <span>Updated {formattedDate}</span>
