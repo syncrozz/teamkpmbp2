@@ -1,0 +1,148 @@
+{
+  "entities": {
+    "PortalSettings": {
+      "title": "PortalSettings",
+      "description": "General contingent hub configurations and notice banner",
+      "type": "object",
+      "properties": {
+        "activePhase": { "type": "string" },
+        "contingentName": { "type": "string" },
+        "eventName": { "type": "string" },
+        "tagline": { "type": "string" },
+        "lastUpdated": { "type": "string" }
+      },
+      "required": ["contingentName", "eventName"]
+    },
+    "Topic": {
+      "title": "Topic",
+      "description": "Contingent informational category topics",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "iconName": { "type": "string" },
+        "displayOrder": { "type": "number" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "title"]
+    },
+    "Subtopic": {
+      "title": "Subtopic",
+      "description": "Detailed subtopics and operation guidelines",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "topicId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "displayOrder": { "type": "number" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "topicId", "title"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "Official notices and memos",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "content": { "type": "string" },
+        "isPinned": { "type": "boolean" },
+        "status": { "type": "string" },
+        "category": { "type": "string" },
+        "publishedAt": { "type": "string" }
+      },
+      "required": ["id", "title"]
+    },
+    "EventItem": {
+      "title": "EventItem",
+      "description": "Competition events and performances",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "venue": { "type": "string" },
+        "scheduleTime": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "title"]
+    },
+    "ScheduleItem": {
+      "title": "ScheduleItem",
+      "description": "Master timetable and itinerary slots",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
+        "venue": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "title"]
+    },
+    "Infographic": {
+      "title": "Infographic",
+      "description": "Visual guides, maps and posters",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "title", "imageUrl"]
+    },
+    "DocumentItem": {
+      "title": "DocumentItem",
+      "description": "Handbooks and forms",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "fileUrl": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "title"]
+    }
+  },
+  "firestore": {
+    "/settings/{settingId}": {
+      "schema": "PortalSettings",
+      "description": "Portal global configurations and notices"
+    },
+    "/topics/{topicId}": {
+      "schema": "Topic",
+      "description": "Contingent topics and operational categories"
+    },
+    "/subtopics/{subtopicId}": {
+      "schema": "Subtopic",
+      "description": "Operational guidelines and subtopic details"
+    },
+    "/announcements/{announcementId}": {
+      "schema": "Announcement",
+      "description": "Official notices and technical memos"
+    },
+    "/events/{eventId}": {
+      "schema": "EventItem",
+      "description": "Contingent competition entries and event guidelines"
+    },
+    "/schedules/{scheduleId}": {
+      "schema": "ScheduleItem",
+      "description": "Master timeline and stage slots"
+    },
+    "/infographics/{infographicId}": {
+      "schema": "Infographic",
+      "description": "Infographic posters and venue maps"
+    },
+    "/documents/{docId}": {
+      "schema": "DocumentItem",
+      "description": "Official contingent documents and forms"
+    }
+  }
+}

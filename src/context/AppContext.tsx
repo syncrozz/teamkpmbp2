@@ -26,6 +26,7 @@ import { db, isFirebaseConfigured, auth } from '../lib/firebase';
 import { useAuth } from './AuthContext';
 import {
   doc,
+  getDoc,
   setDoc,
   deleteDoc,
   collection,
@@ -50,6 +51,8 @@ interface AppContextType {
   setSelectedEventFilter: (id: string | null) => void;
   selectedTopicFilter: string | null;
   setSelectedTopicFilter: (id: string | null) => void;
+  isCloudSyncActive: boolean;
+  cloudSyncLastUpdated: string | null;
 
   // Actions
   updateSettings: (updates: Partial<PortalSettings>) => Promise<void>;
@@ -121,6 +124,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [infographics, setInfographics] = useState<Infographic[]>(initialInfographics);
   const [documents, setDocuments] = useState<DocumentItem[]>(initialDocuments);
   const [travelInfo, setTravelInfo] = useState<TravelAccommodationInfo>(initialTravelInfo);
+  const [isCloudSyncActive, setIsCloudSyncActive] = useState<boolean>(false);
+  const [cloudSyncLastUpdated, setCloudSyncLastUpdated] = useState<string | null>(null);
 
   // Initialize from LocalStorage
   useEffect(() => {
@@ -177,45 +182,77 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     travelInfo,
   ]);
 
-  const { user } = useAuth();
-
-  // Connect to Firestore real-time listeners if configured and auth is present
+  // Connect to Firestore real-time listeners across all devices
   useEffect(() => {
-    // Only attach live snapshot listeners if auth is ready and user is authenticated
-    if (!isFirebaseConfigured || !db || !auth?.currentUser) return;
+    if (!isFirebaseConfigured || !db) return;
 
+    let unsubSettings: (() => void) | undefined;
+    let unsubTravel: (() => void) | undefined;
     let unsubTopics: (() => void) | undefined;
     let unsubSubtopics: (() => void) | undefined;
     let unsubAnn: (() => void) | undefined;
     let unsubEvents: (() => void) | undefined;
+    let unsubSchedules: (() => void) | undefined;
+    let unsubInfographics: (() => void) | undefined;
+    let unsubDocuments: (() => void) | undefined;
+
+    const onSyncSuccess = () => {
+      setIsCloudSyncActive(true);
+      setCloudSyncLastUpdated(new Date().toLocaleTimeString());
+    };
 
     try {
+      // 1. Settings listener
+      unsubSettings = onSnapshot(
+        doc(db, 'settings', 'general'),
+        (snap) => {
+          if (snap.exists()) {
+            setSettings(snap.data() as PortalSettings);
+            onSyncSuccess();
+          }
+        },
+        (err) => console.warn('[Firestore] settings listener:', err.message)
+      );
+
+      // 2. Travel & Accommodation listener
+      unsubTravel = onSnapshot(
+        doc(db, 'settings', 'travelAccommodation'),
+        (snap) => {
+          if (snap.exists()) {
+            setTravelInfo(snap.data() as TravelAccommodationInfo);
+            onSyncSuccess();
+          }
+        },
+        (err) => console.warn('[Firestore] travel info listener:', err.message)
+      );
+
+      // 3. Topics listener
       unsubTopics = onSnapshot(
         collection(db, 'topics'),
         (snapshot) => {
           if (!snapshot.empty) {
             const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Topic));
             setTopics(list.sort((a, b) => a.displayOrder - b.displayOrder));
+            onSyncSuccess();
           }
         },
-        (error) => {
-          console.warn('[Firestore] topics snapshot listener error:', error.message);
-        }
+        (error) => console.warn('[Firestore] topics listener:', error.message)
       );
 
+      // 4. Subtopics listener
       unsubSubtopics = onSnapshot(
         collection(db, 'subtopics'),
         (snapshot) => {
           if (!snapshot.empty) {
             const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Subtopic));
             setSubtopics(list.sort((a, b) => a.displayOrder - b.displayOrder));
+            onSyncSuccess();
           }
         },
-        (error) => {
-          console.warn('[Firestore] subtopics snapshot listener error:', error.message);
-        }
+        (error) => console.warn('[Firestore] subtopics listener:', error.message)
       );
 
+      // 5. Announcements listener
       unsubAnn = onSnapshot(
         collection(db, 'announcements'),
         (snapshot) => {
@@ -224,42 +261,87 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setAnnouncements(
               list.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
             );
+            onSyncSuccess();
           }
         },
-        (error) => {
-          console.warn('[Firestore] announcements snapshot listener error:', error.message);
-        }
+        (error) => console.warn('[Firestore] announcements listener:', error.message)
       );
 
+      // 6. Events listener
       unsubEvents = onSnapshot(
         collection(db, 'events'),
         (snapshot) => {
           if (!snapshot.empty) {
             const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as EventItem));
             setEvents(list.sort((a, b) => a.displayOrder - b.displayOrder));
+            onSyncSuccess();
           }
         },
-        (error) => {
-          console.warn('[Firestore] events snapshot listener error:', error.message);
-        }
+        (error) => console.warn('[Firestore] events listener:', error.message)
+      );
+
+      // 7. Schedules listener
+      unsubSchedules = onSnapshot(
+        collection(db, 'schedules'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as ScheduleItem));
+            setSchedules(list);
+            onSyncSuccess();
+          }
+        },
+        (error) => console.warn('[Firestore] schedules listener:', error.message)
+      );
+
+      // 8. Infographics listener
+      unsubInfographics = onSnapshot(
+        collection(db, 'infographics'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Infographic));
+            setInfographics(list.sort((a, b) => a.displayOrder - b.displayOrder));
+            onSyncSuccess();
+          }
+        },
+        (error) => console.warn('[Firestore] infographics listener:', error.message)
+      );
+
+      // 9. Documents listener
+      unsubDocuments = onSnapshot(
+        collection(db, 'documents'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as DocumentItem));
+            setDocuments(list);
+            onSyncSuccess();
+          }
+        },
+        (error) => console.warn('[Firestore] documents listener:', error.message)
       );
     } catch (e) {
       console.warn('Firestore snapshot setup error:', e);
     }
 
     return () => {
+      unsubSettings?.();
+      unsubTravel?.();
       unsubTopics?.();
       unsubSubtopics?.();
       unsubAnn?.();
       unsubEvents?.();
+      unsubSchedules?.();
+      unsubInfographics?.();
+      unsubDocuments?.();
     };
-  }, [user]);
+  }, []);
 
-  // Sync item to Firestore if configured and authenticated
+  // Sync item to Cloud Firestore for cross-device synchronization
   const syncToFirestore = async (collectionName: string, id: string, data: Record<string, unknown>) => {
-    if (isFirebaseConfigured && db && auth?.currentUser) {
+    if (isFirebaseConfigured && db) {
       try {
         await setDoc(doc(db, collectionName, id), data, { merge: true });
+        setIsCloudSyncActive(true);
+        setCloudSyncLastUpdated(new Date().toLocaleTimeString());
       } catch (err) {
         console.warn(`[Firestore] Sync error on ${collectionName}/${id}:`, err);
       }
@@ -267,9 +349,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteFromFirestore = async (collectionName: string, id: string) => {
-    if (isFirebaseConfigured && db && auth?.currentUser) {
+    if (isFirebaseConfigured && db) {
       try {
         await deleteDoc(doc(db, collectionName, id));
+        setIsCloudSyncActive(true);
+        setCloudSyncLastUpdated(new Date().toLocaleTimeString());
       } catch (err) {
         console.warn(`[Firestore] Delete error on ${collectionName}/${id}:`, err);
       }
@@ -556,7 +640,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await syncToFirestore('settings', 'travelAccommodation', updated as unknown as Record<string, unknown>);
   };
 
-  const resetToInitialData = () => {
+  const resetToInitialData = async () => {
     setSettings(initialSettings);
     setTopics(initialTopics);
     setSubtopics(initialSubtopics);
@@ -568,8 +652,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTravelInfo(initialTravelInfo);
     try {
       localStorage.removeItem(STORAGE_KEY);
+      if (isFirebaseConfigured && db) {
+        await setDoc(doc(db, 'settings', 'general'), initialSettings);
+        await setDoc(doc(db, 'settings', 'travelAccommodation'), initialTravelInfo);
+        for (const item of initialTopics) {
+          await setDoc(doc(db, 'topics', item.id), item);
+        }
+        for (const item of initialSubtopics) {
+          await setDoc(doc(db, 'subtopics', item.id), item);
+        }
+        for (const item of initialAnnouncements) {
+          await setDoc(doc(db, 'announcements', item.id), item);
+        }
+        for (const item of initialEvents) {
+          await setDoc(doc(db, 'events', item.id), item);
+        }
+        for (const item of initialSchedules) {
+          await setDoc(doc(db, 'schedules', item.id), item);
+        }
+        for (const item of initialInfographics) {
+          await setDoc(doc(db, 'infographics', item.id), item);
+        }
+        for (const item of initialDocuments) {
+          await setDoc(doc(db, 'documents', item.id), item);
+        }
+        setIsCloudSyncActive(true);
+        setCloudSyncLastUpdated(new Date().toLocaleTimeString());
+      }
     } catch (e) {
-      console.error(e);
+      console.error('Reset error:', e);
     }
   };
 
@@ -593,6 +704,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedEventFilter,
         selectedTopicFilter,
         setSelectedTopicFilter,
+        isCloudSyncActive,
+        cloudSyncLastUpdated,
         updateSettings,
         setActivePhase,
         addTopic,

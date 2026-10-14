@@ -1,11 +1,11 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { ShieldCheck, X, Plus } from 'lucide-react';
+import { ShieldCheck, X, Plus, Cloud } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 export const AdminBar: React.FC = () => {
   const { isAdminMode, exitAdminMode } = useAuth();
-  const { setActiveTab } = useApp();
+  const { setActiveTab, isCloudSyncActive, cloudSyncLastUpdated } = useApp();
 
   if (!isAdminMode) return null;
 
@@ -14,10 +14,15 @@ export const AdminBar: React.FC = () => {
       <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-          <span className="font-bold text-emerald-300">🟢 Admin Mode Aktif:</span>
-          <span className="text-emerald-200/90 hidden sm:inline text-[11px]">
-            Tindakan pentadbiran (edit, tambah, padam, ubah) kini dibuka.
-          </span>
+          <span className="font-bold text-emerald-300">🟢 Admin Mode Aktif</span>
+          <span className="text-emerald-500 hidden sm:inline">·</span>
+          <div className="flex items-center gap-1 text-[11px] text-emerald-200/90">
+            <Cloud className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Sync Antara Peranti: {isCloudSyncActive ? 'Aktif (Cloud Firestore)' : 'Menyambung...'}</span>
+            {cloudSyncLastUpdated && (
+              <span className="text-emerald-400/80 text-[10px]">({cloudSyncLastUpdated})</span>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2">

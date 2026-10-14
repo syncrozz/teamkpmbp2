@@ -130,7 +130,7 @@ export const HeroBanner: React.FC = () => {
         {/* Admin Quick Reset Helper in Admin Mode */}
         {isAdminMode && (
           <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Admin data persistence: Local Storage + Firestore sync</span>
+            <span>Penyegerakan awan: Cloud Firestore aktif (sync masa nyata antara peranti)</span>
             <button
               onClick={() => {
                 if (window.confirm('Reset all portal content to official KPMBP defaults?')) {

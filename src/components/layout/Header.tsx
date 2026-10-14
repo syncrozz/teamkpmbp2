@@ -3,6 +3,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { Shield, LogOut } from 'lucide-react';
 import { AdminLoginModal } from '../admin/AdminLoginModal';
+import { PlatformLogo } from '../common/PlatformLogo';
+import { PWAInstallButton } from '../common/PWAInstallButton';
 
 export const Header: React.FC = () => {
   const { isAdminMode, exitAdminMode } = useAuth();
@@ -14,17 +16,13 @@ export const Header: React.FC = () => {
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-8">
           
-          {/* Zone 1: Single text element wordmark */}
+          {/* Zone 1: Central Platform Logo Integration */}
           <button
             onClick={() => setActiveTab('home')}
-            className="flex items-center gap-2 text-left shrink-0 cursor-pointer focus:outline-none"
+            className="flex items-center text-left shrink-0 cursor-pointer focus:outline-none"
+            aria-label="Kembali ke Laman Utama"
           >
-            <span className="text-base sm:text-lg font-bold tracking-tight text-slate-900 whitespace-nowrap">
-              KPMBP Contingent Hub
-            </span>
-            <span className="hidden sm:inline-block text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
-              SOAR 2026
-            </span>
+            <PlatformLogo />
           </button>
 
           {/* Zone 2: 4–5 clean single-line text navigation links */}
@@ -87,8 +85,9 @@ export const Header: React.FC = () => {
             </button>
           </nav>
 
-          {/* Zone 3: Admin Mode Action */}
+          {/* Zone 3: PWA Install & Admin Mode Action */}
           <div className="flex items-center gap-2 shrink-0">
+            <PWAInstallButton />
             {isAdminMode ? (
               <div className="flex items-center gap-2">
                 <div className="min-h-[36px] px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs animate-in fade-in duration-150">
