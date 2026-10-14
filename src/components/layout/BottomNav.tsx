@@ -34,8 +34,8 @@ export const BottomNav: React.FC = () => {
   const navItems = [
     { id: 'home', label: settings.navLabels?.['home'] || 'Home', icon: Home },
     { id: 'announcements', label: settings.navLabels?.['announcements'] || 'Notices', icon: Bell },
-    { id: 'events', label: settings.navLabels?.['events'] || 'Events', icon: Sparkles },
     { id: 'infographics', label: settings.navLabels?.['infographics'] || 'Posters', icon: ImageIcon },
+    { id: 'schedule', label: settings.navLabels?.['schedule'] || 'Schedule', icon: Calendar },
   ];
 
   return (

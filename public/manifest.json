@@ -1,7 +1,7 @@
 {
   "id": "/",
   "name": "SYNCROZZ KPMBP Contingent Hub",
-  "short_name": "KPMBP Hub",
+  "short_name": "Rujukan Team",
   "description": "Mobile-first public information portal for KPMBP participants attending SOAR IPMA 2026 with real-time announcements, schedules, and operational guidelines.",
   "start_url": "/",
   "scope": "/",

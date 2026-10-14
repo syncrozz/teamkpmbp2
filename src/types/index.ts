@@ -86,6 +86,7 @@ export interface Infographic {
   status: ContentStatus;
   displayOrder: number;
   uploadedAt: string;
+  updatedAt?: string;
   sizeBytes?: number;
 }
 

@@ -22,15 +22,6 @@ export const defaultQuickAccessItems: QuickAccessItem[] = [
     colorTheme: 'amber',
   },
   {
-    id: 'events',
-    title: 'Featured Events',
-    desc: 'Duo, Teater, Zapin, Band & Dakwah',
-    targetType: 'tab',
-    targetValue: 'events',
-    iconName: 'Sparkles',
-    colorTheme: 'blue',
-  },
-  {
     id: 'infographics',
     title: 'Posters & Maps',
     desc: 'Venue maps, grids & guidelines',

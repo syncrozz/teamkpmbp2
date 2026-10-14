@@ -33,7 +33,7 @@ export interface BrandingAssetConfig {
 export const BRANDING_CONFIG: BrandingAssetConfig = {
   // Platform Identity
   platformName: 'SYNCROZZ KPMBP Contingent Hub',
-  platformShortName: 'KPMBP Hub',
+  platformShortName: 'Rujukan Team',
   platformDescription:
     'Mobile-first public information portal for KPMBP participants attending SOAR IPMA 2026 with real-time announcements, schedules, and operational guidelines.',
   themeColor: '#2563eb', // Contingent Blue

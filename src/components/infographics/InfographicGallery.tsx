@@ -46,7 +46,7 @@ interface InfographicGalleryProps {
  * Optimizes image file to fit within browser storage and Firestore limits (<1MB)
  * while preserving high visual clarity.
  */
-const optimizeImageFile = async (file: File, maxDimension = 1400, quality = 0.82): Promise<string> => {
+const optimizeImageFile = async (file: File, maxDimension = 1100, quality = 0.78): Promise<string> => {
   if (!file.type.startsWith('image/')) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -91,6 +91,10 @@ const optimizeImageFile = async (file: File, maxDimension = 1400, quality = 0.82
       if (!dataUrl.startsWith('data:image/webp')) {
         dataUrl = canvas.toDataURL('image/jpeg', quality);
       }
+      // Guarantee size is safe for Firestore cloud storage (<750KB)
+      if (dataUrl.length > 750000) {
+        dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+      }
       resolve(dataUrl);
     };
 
@@ -115,6 +119,7 @@ export const InfographicGallery: React.FC<InfographicGalleryProps> = ({
     addInfographic,
     updateInfographic,
     deleteInfographic,
+    reorderInfographic,
     topics,
     events,
     selectedEventFilter,
@@ -265,8 +270,8 @@ export const InfographicGallery: React.FC<InfographicGalleryProps> = ({
         title: item.title.trim() || 'Infografik Kontinjen',
         description: item.description.trim() || 'Panduan visual dan infografik kontinjen.',
         imageUrl: finalImageUrl,
-        topicId: item.topicId || undefined,
-        eventId: item.eventId || undefined,
+        topicId: item.topicId ? item.topicId : '',
+        eventId: item.eventId ? item.eventId : '',
         tags: tagsArray,
         status: 'published',
         displayOrder: infographics.length + 1,
@@ -375,10 +380,9 @@ export const InfographicGallery: React.FC<InfographicGalleryProps> = ({
           <button
             onClick={() => {
               setSelectedTopicFilter(null);
-              setSelectedEventFilter(null);
             }}
             className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
-              !selectedTopicFilter && !selectedEventFilter
+              !selectedTopicFilter
                 ? 'bg-slate-900 text-white font-medium shadow-xs'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
             }`}
@@ -390,7 +394,6 @@ export const InfographicGallery: React.FC<InfographicGalleryProps> = ({
             <button
               key={t.id}
               onClick={() => {
-                setSelectedEventFilter(null);
                 setSelectedTopicFilter(selectedTopicFilter === t.id ? null : t.id);
               }}
               className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
@@ -400,23 +403,6 @@ export const InfographicGallery: React.FC<InfographicGalleryProps> = ({
               }`}
             >
               {t.title}
-            </button>
-          ))}
-
-          {events.map((e) => (
-            <button
-              key={e.id}
-              onClick={() => {
-                setSelectedTopicFilter(null);
-                setSelectedEventFilter(selectedEventFilter === e.id ? null : e.id);
-              }}
-              className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
-                selectedEventFilter === e.id
-                  ? 'bg-indigo-600 text-white font-medium shadow-xs'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-              }`}
-            >
-              {e.title}
             </button>
           ))}
 
@@ -447,7 +433,7 @@ export const InfographicGallery: React.FC<InfographicGalleryProps> = ({
 
       {/* Original Infographic Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {displayed.map((item) => {
+        {displayed.map((item, index) => {
           const associatedTopic = topics.find((t) => t.id === item.topicId);
           const associatedEvent = events.find((e) => e.id === item.eventId);
 
@@ -479,6 +465,42 @@ export const InfographicGallery: React.FC<InfographicGalleryProps> = ({
                       <span>View Full Resolution</span>
                     </span>
                   </div>
+
+                  {/* Admin Reorder Controls Overlay (< and >) */}
+                  {isAdminMode && (
+                    <div
+                      className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-slate-900/85 backdrop-blur-xs p-1 rounded-lg border border-slate-700 shadow-md"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          reorderInfographic(item.id, 'left');
+                        }}
+                        disabled={index === 0}
+                        className="w-6 h-6 flex items-center justify-center text-xs font-bold text-white bg-slate-800 hover:bg-blue-600 rounded disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                        title="Susun ke Kiri (<)"
+                      >
+                        &lt;
+                      </button>
+                      <span className="text-[10px] font-bold text-blue-300 px-1.5">
+                        #{index + 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          reorderInfographic(item.id, 'right');
+                        }}
+                        disabled={index === displayed.length - 1}
+                        className="w-6 h-6 flex items-center justify-center text-xs font-bold text-white bg-slate-800 hover:bg-blue-600 rounded disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                        title="Susun ke Kanan (>)"
+                      >
+                        &gt;
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Content Details */}
@@ -550,7 +572,31 @@ export const InfographicGallery: React.FC<InfographicGalleryProps> = ({
                 </button>
 
                 {isAdminMode && (
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
+                    {/* Reorder Buttons < and > */}
+                    <div className="flex items-center gap-0.5 bg-slate-200/80 p-0.5 rounded-lg border border-slate-300">
+                      <button
+                        type="button"
+                        onClick={() => reorderInfographic(item.id, 'left')}
+                        disabled={index === 0}
+                        className="h-6 w-6 flex items-center justify-center text-xs font-black text-slate-800 bg-white hover:bg-blue-600 hover:text-white rounded shadow-2xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                        title="Susun kad ke kiri (<)"
+                      >
+                        &lt;
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => reorderInfographic(item.id, 'right')}
+                        disabled={index === displayed.length - 1}
+                        className="h-6 w-6 flex items-center justify-center text-xs font-black text-slate-800 bg-white hover:bg-blue-600 hover:text-white rounded shadow-2xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                        title="Susun kad ke kanan (>)"
+                      >
+                        &gt;
+                      </button>
+                    </div>
+
+                    <span className="text-slate-300">|</span>
+
                     <button
                       onClick={() =>
                         updateInfographic(item.id, {

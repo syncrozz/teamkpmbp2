@@ -18,7 +18,6 @@ export const Header: React.FC = () => {
   const navItems = [
     { id: 'home', defaultLabel: 'Overview' },
     { id: 'announcements', defaultLabel: 'Announcements' },
-    { id: 'events', defaultLabel: 'Events' },
     { id: 'infographics', defaultLabel: 'Infographics' },
     { id: 'schedule', defaultLabel: 'Schedule' },
     { id: 'travel', defaultLabel: 'Travel & Stay' },

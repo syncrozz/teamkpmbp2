@@ -12,7 +12,6 @@ import { AdminBar } from './components/admin/AdminBar';
 import { HeroBanner } from './components/home/HeroBanner';
 import { QuickAccess } from './components/home/QuickAccess';
 import { AnnouncementList } from './components/announcements/AnnouncementList';
-import { EventList } from './components/events/EventList';
 import { InfographicGallery } from './components/infographics/InfographicGallery';
 import { TopicSection } from './components/topics/TopicSection';
 import { ScheduleList } from './components/schedule/ScheduleList';
@@ -177,8 +176,6 @@ const MainContent: React.FC = () => {
         )}
 
         {activeTab === 'announcements' && <AnnouncementList />}
-
-        {activeTab === 'events' && <EventList />}
 
         {activeTab === 'infographics' && <InfographicGallery />}
 

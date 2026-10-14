@@ -91,6 +91,7 @@ interface AppContextType {
   addInfographic: (data: Omit<Infographic, 'id' | 'uploadedAt'>) => Promise<string>;
   updateInfographic: (id: string, updates: Partial<Infographic>) => Promise<void>;
   deleteInfographic: (id: string) => Promise<void>;
+  reorderInfographic: (id: string, direction: 'left' | 'right') => Promise<void>;
 
   // Documents CRUD
   addDocument: (data: Omit<DocumentItem, 'id' | 'updatedAt'>) => Promise<string>;
@@ -300,7 +301,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         (snapshot) => {
           if (!snapshot.empty) {
             const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Infographic));
-            setInfographics(list.sort((a, b) => a.displayOrder - b.displayOrder));
+            list.sort((a, b) => {
+              const orderA = a.displayOrder ?? 999;
+              const orderB = b.displayOrder ?? 999;
+              if (orderA !== orderB) return orderA - orderB;
+              const timeA = new Date(a.updatedAt || a.uploadedAt || 0).getTime();
+              const timeB = new Date(b.updatedAt || b.uploadedAt || 0).getTime();
+              return timeB - timeA;
+            });
+            setInfographics(list);
             onSyncSuccess();
           }
         },
@@ -340,7 +349,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const syncToFirestore = async (collectionName: string, id: string, data: Record<string, unknown>) => {
     if (isFirebaseConfigured && db) {
       try {
-        await setDoc(doc(db, collectionName, id), data, { merge: true });
+        const cleaned = cleanForFirestore(data);
+        await setDoc(doc(db, collectionName, id), cleaned, { merge: true });
         setIsCloudSyncActive(true);
         setCloudSyncLastUpdated(new Date().toLocaleTimeString());
       } catch (err) {
@@ -369,7 +379,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       lastUpdated: new Date().toISOString(),
     };
     setSettings(updated);
-    await syncToFirestore('settings', 'general', updated);
+    await syncToFirestore('settings', 'general', cleanForFirestore(updated) as unknown as Record<string, unknown>);
   };
 
   const setActivePhase = async (phase: EventPhase) => {
@@ -387,16 +397,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedAt: now,
     };
     setTopics((prev) => [...prev, newTopic].sort((a, b) => a.displayOrder - b.displayOrder));
-    await syncToFirestore('topics', id, newTopic as unknown as Record<string, unknown>);
+    await syncToFirestore('topics', id, cleanForFirestore(newTopic) as unknown as Record<string, unknown>);
     return id;
   };
 
   const updateTopic = async (id: string, updates: Partial<Topic>) => {
     const now = new Date().toISOString();
+    let fullItem: Topic | undefined;
     setTopics((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, ...updates, updatedAt: now } : t))
+      prev.map((t) => {
+        if (t.id === id) {
+          fullItem = { ...t, ...updates, updatedAt: now };
+          return fullItem;
+        }
+        return t;
+      })
     );
-    await syncToFirestore('topics', id, { ...updates, updatedAt: now });
+    const dataToSave = fullItem || { ...updates, updatedAt: now };
+    await syncToFirestore('topics', id, cleanForFirestore(dataToSave) as unknown as Record<string, unknown>);
   };
 
   const deleteTopic = async (id: string) => {
@@ -423,8 +441,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     reordered.sort((a, b) => a.displayOrder - b.displayOrder);
     setTopics(reordered);
-    await syncToFirestore('topics', current.id, { displayOrder: current.displayOrder });
-    await syncToFirestore('topics', target.id, { displayOrder: target.displayOrder });
+    await syncToFirestore('topics', current.id, cleanForFirestore(current) as unknown as Record<string, unknown>);
+    await syncToFirestore('topics', target.id, cleanForFirestore(target) as unknown as Record<string, unknown>);
   };
 
   // Subtopics
@@ -438,16 +456,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedAt: now,
     };
     setSubtopics((prev) => [...prev, newSub].sort((a, b) => a.displayOrder - b.displayOrder));
-    await syncToFirestore('subtopics', id, newSub as unknown as Record<string, unknown>);
+    await syncToFirestore('subtopics', id, cleanForFirestore(newSub) as unknown as Record<string, unknown>);
     return id;
   };
 
   const updateSubtopic = async (id: string, updates: Partial<Subtopic>) => {
     const now = new Date().toISOString();
+    let fullItem: Subtopic | undefined;
     setSubtopics((prev) =>
-      prev.map((st) => (st.id === id ? { ...st, ...updates, updatedAt: now } : st))
+      prev.map((st) => {
+        if (st.id === id) {
+          fullItem = { ...st, ...updates, updatedAt: now };
+          return fullItem;
+        }
+        return st;
+      })
     );
-    await syncToFirestore('subtopics', id, { ...updates, updatedAt: now });
+    const dataToSave = fullItem || { ...updates, updatedAt: now };
+    await syncToFirestore('subtopics', id, cleanForFirestore(dataToSave) as unknown as Record<string, unknown>);
   };
 
   const deleteSubtopic = async (id: string) => {
@@ -503,16 +529,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedAt: now,
     };
     setAnnouncements((prev) => [newAnn, ...prev]);
-    await syncToFirestore('announcements', id, newAnn as unknown as Record<string, unknown>);
+    await syncToFirestore('announcements', id, cleanForFirestore(newAnn) as unknown as Record<string, unknown>);
     return id;
   };
 
   const updateAnnouncement = async (id: string, updates: Partial<Announcement>) => {
     const now = new Date().toISOString();
+    let fullItem: Announcement | undefined;
     setAnnouncements((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, ...updates, updatedAt: now } : a))
+      prev.map((a) => {
+        if (a.id === id) {
+          fullItem = { ...a, ...updates, updatedAt: now };
+          return fullItem;
+        }
+        return a;
+      })
     );
-    await syncToFirestore('announcements', id, { ...updates, updatedAt: now });
+    const dataToSave = fullItem || { ...updates, updatedAt: now };
+    await syncToFirestore('announcements', id, cleanForFirestore(dataToSave) as unknown as Record<string, unknown>);
   };
 
   const deleteAnnouncement = async (id: string) => {
@@ -537,16 +571,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedAt: now,
     };
     setEvents((prev) => [...prev, newEvent].sort((a, b) => a.displayOrder - b.displayOrder));
-    await syncToFirestore('events', id, newEvent as unknown as Record<string, unknown>);
+    await syncToFirestore('events', id, cleanForFirestore(newEvent) as unknown as Record<string, unknown>);
     return id;
   };
 
   const updateEvent = async (id: string, updates: Partial<EventItem>) => {
     const now = new Date().toISOString();
+    let fullItem: EventItem | undefined;
     setEvents((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, ...updates, updatedAt: now } : e))
+      prev.map((e) => {
+        if (e.id === id) {
+          fullItem = { ...e, ...updates, updatedAt: now };
+          return fullItem;
+        }
+        return e;
+      })
     );
-    await syncToFirestore('events', id, { ...updates, updatedAt: now });
+    const dataToSave = fullItem || { ...updates, updatedAt: now };
+    await syncToFirestore('events', id, cleanForFirestore(dataToSave) as unknown as Record<string, unknown>);
   };
 
   const deleteEvent = async (id: string) => {
@@ -562,15 +604,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id,
     };
     setSchedules((prev) => [...prev, newSchedule]);
-    await syncToFirestore('schedules', id, newSchedule as unknown as Record<string, unknown>);
+    await syncToFirestore('schedules', id, cleanForFirestore(newSchedule) as unknown as Record<string, unknown>);
     return id;
   };
 
   const updateSchedule = async (id: string, updates: Partial<ScheduleItem>) => {
+    let fullItem: ScheduleItem | undefined;
     setSchedules((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, ...updates } : s))
+      prev.map((s) => {
+        if (s.id === id) {
+          fullItem = { ...s, ...updates };
+          return fullItem;
+        }
+        return s;
+      })
     );
-    await syncToFirestore('schedules', id, updates);
+    const dataToSave = fullItem || updates;
+    await syncToFirestore('schedules', id, cleanForFirestore(dataToSave) as unknown as Record<string, unknown>);
   };
 
   const deleteSchedule = async (id: string) => {
@@ -582,21 +632,77 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addInfographic = async (data: Omit<Infographic, 'id' | 'uploadedAt'>): Promise<string> => {
     const id = `info-${Date.now()}`;
     const now = new Date().toISOString();
+    // Shift existing items by +1 so the newest item is 1st from the left
+    const shifted = infographics.map((item, idx) => ({
+      ...item,
+      displayOrder: idx + 2,
+    }));
+    for (const item of shifted) {
+      await syncToFirestore('infographics', item.id, { displayOrder: item.displayOrder });
+    }
     const newInfo: Infographic = {
       ...data,
       id,
+      displayOrder: 1,
       uploadedAt: now,
+      updatedAt: now,
     };
-    setInfographics((prev) => [newInfo, ...prev]);
-    await syncToFirestore('infographics', id, newInfo as unknown as Record<string, unknown>);
+    setInfographics([newInfo, ...shifted]);
+    await syncToFirestore('infographics', id, cleanForFirestore(newInfo) as unknown as Record<string, unknown>);
     return id;
   };
 
   const updateInfographic = async (id: string, updates: Partial<Infographic>) => {
+    const now = new Date().toISOString();
+    let fullItem: Infographic | undefined;
     setInfographics((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
+      prev.map((item) => {
+        if (item.id === id) {
+          fullItem = { ...item, ...updates, updatedAt: now };
+          return fullItem;
+        }
+        return item;
+      })
     );
-    await syncToFirestore('infographics', id, updates);
+    const dataToSave = fullItem || { ...updates, updatedAt: now };
+    await syncToFirestore('infographics', id, cleanForFirestore(dataToSave) as unknown as Record<string, unknown>);
+  };
+
+  const reorderInfographic = async (id: string, direction: 'left' | 'right') => {
+    // Current sorted list (1st from left = index 0)
+    const sorted = [...infographics].sort((a, b) => {
+      const orderA = a.displayOrder ?? 999;
+      const orderB = b.displayOrder ?? 999;
+      if (orderA !== orderB) return orderA - orderB;
+      const timeA = new Date(a.updatedAt || a.uploadedAt || 0).getTime();
+      const timeB = new Date(b.updatedAt || b.uploadedAt || 0).getTime();
+      return timeB - timeA;
+    });
+
+    const index = sorted.findIndex((item) => item.id === id);
+    if (index === -1) return;
+    if (direction === 'left' && index === 0) return;
+    if (direction === 'right' && index === sorted.length - 1) return;
+
+    const targetIndex = direction === 'left' ? index - 1 : index + 1;
+
+    // Swap items in array
+    const itemA = sorted[index];
+    const itemB = sorted[targetIndex];
+    sorted[index] = itemB;
+    sorted[targetIndex] = itemA;
+
+    // Normalize displayOrder: 1, 2, 3...
+    const updatedList = sorted.map((item, idx) => ({
+      ...item,
+      displayOrder: idx + 1,
+    }));
+
+    setInfographics(updatedList);
+
+    // Sync changed orders to Firestore
+    await syncToFirestore('infographics', itemA.id, { displayOrder: targetIndex + 1 });
+    await syncToFirestore('infographics', itemB.id, { displayOrder: index + 1 });
   };
 
   const deleteInfographic = async (id: string) => {
@@ -614,16 +720,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedAt: now,
     };
     setDocuments((prev) => [newDoc, ...prev]);
-    await syncToFirestore('documents', id, newDoc as unknown as Record<string, unknown>);
+    await syncToFirestore('documents', id, cleanForFirestore(newDoc) as unknown as Record<string, unknown>);
     return id;
   };
 
   const updateDocument = async (id: string, updates: Partial<DocumentItem>) => {
     const now = new Date().toISOString();
+    let fullItem: DocumentItem | undefined;
     setDocuments((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, ...updates, updatedAt: now } : d))
+      prev.map((d) => {
+        if (d.id === id) {
+          fullItem = { ...d, ...updates, updatedAt: now };
+          return fullItem;
+        }
+        return d;
+      })
     );
-    await syncToFirestore('documents', id, { ...updates, updatedAt: now });
+    const dataToSave = fullItem || { ...updates, updatedAt: now };
+    await syncToFirestore('documents', id, cleanForFirestore(dataToSave) as unknown as Record<string, unknown>);
   };
 
   const deleteDocument = async (id: string) => {
@@ -730,6 +844,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addInfographic,
         updateInfographic,
         deleteInfographic,
+        reorderInfographic,
         addDocument,
         updateDocument,
         deleteDocument,

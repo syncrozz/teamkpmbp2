@@ -142,7 +142,6 @@ const COLOR_MAP: Record<
 
 const APP_TABS = [
   { id: 'announcements', label: 'Announcements (Notis Rasmi)' },
-  { id: 'events', label: 'Featured Events (Acara Pertandingan)' },
   { id: 'infographics', label: 'Posters & Maps (Peta & Infografik)' },
   { id: 'schedule', label: 'Timeline (Jadual & Kronologi)' },
   { id: 'travel', label: 'Travel & Accommodation (Penginapan & Bas)' },
@@ -197,10 +196,6 @@ export const QuickAccess: React.FC = () => {
     }
     if (item.targetValue === 'announcements') {
       const count = announcements.filter((a) => a.status === 'published').length;
-      return `${count} items`;
-    }
-    if (item.targetValue === 'events') {
-      const count = events.filter((e) => e.status === 'published').length;
       return `${count} items`;
     }
     if (item.targetValue === 'infographics') {
