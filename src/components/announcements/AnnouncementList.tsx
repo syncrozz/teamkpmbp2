@@ -16,6 +16,8 @@ import {
   AlertCircle,
 } from 'lucide-react';
 
+import { SectionLinkButton } from '../common/SectionLinkButton';
+
 export const AnnouncementList: React.FC<{ limit?: number; showHeader?: boolean }> = ({
   limit,
   showHeader = true,
@@ -90,7 +92,7 @@ export const AnnouncementList: React.FC<{ limit?: number; showHeader?: boolean }
   return (
     <div className="space-y-4">
       {showHeader && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
               Announcements & Notices
@@ -100,15 +102,19 @@ export const AnnouncementList: React.FC<{ limit?: number; showHeader?: boolean }
             </p>
           </div>
 
-          {isAdminMode && (
-            <button
-              onClick={() => setIsAddingNew(true)}
-              className="min-h-[36px] px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>New Announcement</span>
-            </button>
-          )}
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <SectionLinkButton slug="pengumuman" />
+
+            {isAdminMode && (
+              <button
+                onClick={() => setIsAddingNew(true)}
+                className="min-h-[34px] px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>New Announcement</span>
+              </button>
+            )}
+          </div>
         </div>
       )}
 

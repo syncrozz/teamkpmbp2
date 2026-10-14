@@ -21,6 +21,7 @@ import {
   X,
   AlertCircle,
 } from 'lucide-react';
+import { SectionLinkButton } from '../common/SectionLinkButton';
 
 const iconMap: Record<string, React.ElementType> = {
   Compass,
@@ -137,7 +138,7 @@ export const TopicSection: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
             Contingent Topics & Briefing Packs
@@ -147,15 +148,19 @@ export const TopicSection: React.FC = () => {
           </p>
         </div>
 
-        {isAdminMode && (
-          <button
-            onClick={() => setIsAddingTopic(true)}
-            className="min-h-[36px] px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Topic</span>
-          </button>
-        )}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <SectionLinkButton slug="topik" />
+
+          {isAdminMode && (
+            <button
+              onClick={() => setIsAddingTopic(true)}
+              className="min-h-[34px] px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Topic</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Add Topic Form (Admin Mode) */}

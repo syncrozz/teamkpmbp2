@@ -18,7 +18,13 @@ import {
   Loader2,
   Link as LinkIcon,
   FileImage,
+  Edit2,
+  Plus,
+  Check,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
+import { copySectionDirectLink, updatePageOGIMeta } from '../../utils/slugRouting';
 import { storage, isFirebaseConfigured, auth } from '../../lib/firebase';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
@@ -121,6 +127,10 @@ export const InfographicGallery: React.FC<InfographicGalleryProps> = ({
     deleteInfographic,
     reorderInfographic,
     topics,
+    addTopic,
+    updateTopic,
+    deleteTopic,
+    reorderTopic,
     events,
     selectedEventFilter,
     setSelectedEventFilter,
@@ -136,6 +146,13 @@ export const InfographicGallery: React.FC<InfographicGalleryProps> = ({
   const [isUploadingBatch, setIsUploadingBatch] = useState(false);
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
 
+  // Topic/Tag inline management state for filter bar buttons
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const [newTagTitle, setNewTagTitle] = useState('');
+  const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
+  const [editingTopicTitle, setEditingTopicTitle] = useState('');
+  const [tagActionNotice, setTagActionNotice] = useState<string | null>(null);
+
   // Tab mode in upload modal: 'file' | 'url'
   const [uploadMode, setUploadMode] = useState<'file' | 'url'>('file');
   const [directUrlInput, setDirectUrlInput] = useState('');
@@ -143,6 +160,68 @@ export const InfographicGallery: React.FC<InfographicGalleryProps> = ({
   const [directDescInput, setDirectDescInput] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Handlers for Tag / Button management
+  const handleAddNewTag = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const title = newTagTitle.trim();
+    if (!title) return;
+    try {
+      await addTopic({
+        title,
+        description: `Kategori rujukan untuk ${title}`,
+        iconName: 'Bookmark',
+        displayOrder: topics.length + 1,
+        status: 'published',
+        featured: false,
+      });
+      setNewTagTitle('');
+      setIsAddingTag(false);
+      setTagActionNotice(`Tag "${title}" berjaya ditambah!`);
+      setTimeout(() => setTagActionNotice(null), 3000);
+    } catch (err) {
+      console.error('Failed to add tag:', err);
+    }
+  };
+
+  const handleSaveEditTag = async (id: string) => {
+    const title = editingTopicTitle.trim();
+    if (!title) return;
+    try {
+      await updateTopic(id, { title });
+      setEditingTopicId(null);
+      setEditingTopicTitle('');
+      setTagActionNotice(`Tag berjaya dikemaskini kepada "${title}"!`);
+      setTimeout(() => setTagActionNotice(null), 3000);
+    } catch (err) {
+      console.error('Failed to update tag:', err);
+    }
+  };
+
+  const handleDeleteTag = async (id: string, title: string) => {
+    if (window.confirm(`Adakah anda pasti ingin memadam tag / butang topik "${title}"?`)) {
+      try {
+        if (selectedTopicFilter === id) {
+          setSelectedTopicFilter(null);
+        }
+        await deleteTopic(id);
+        setTagActionNotice(`Tag "${title}" telah dipadam.`);
+        setTimeout(() => setTagActionNotice(null), 3000);
+      } catch (err) {
+        console.error('Failed to delete tag:', err);
+      }
+    }
+  };
+
+  const handleReorderTag = async (id: string, direction: 'up' | 'down') => {
+    try {
+      await reorderTopic(id, direction);
+      setTagActionNotice(`Susunan tag dikemaskini.`);
+      setTimeout(() => setTagActionNotice(null), 2000);
+    } catch (err) {
+      console.error('Failed to reorder tag:', err);
+    }
+  };
 
   // File selection handler
   const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -376,44 +455,265 @@ export const InfographicGallery: React.FC<InfographicGalleryProps> = ({
 
       {/* Filter Bar */}
       {showFilters && (
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <button
-            onClick={() => {
-              setSelectedTopicFilter(null);
-            }}
-            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
-              !selectedTopicFilter
-                ? 'bg-slate-900 text-white font-medium shadow-xs'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-            }`}
-          >
-            All Infographics
-          </button>
+        <div className="space-y-2">
+          {/* Action notification toast */}
+          {tagActionNotice && (
+            <div className="bg-emerald-50 text-emerald-800 text-xs px-3 py-1.5 rounded-lg border border-emerald-200 flex items-center justify-between animate-in fade-in">
+              <span>{tagActionNotice}</span>
+              <button
+                type="button"
+                onClick={() => setTagActionNotice(null)}
+                className="text-emerald-600 hover:text-emerald-900 ml-2 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
-          {topics.map((t) => (
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            {/* All Infographics button */}
             <button
-              key={t.id}
+              type="button"
               onClick={() => {
-                setSelectedTopicFilter(selectedTopicFilter === t.id ? null : t.id);
+                setSelectedTopicFilter(null);
               }}
               className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
-                selectedTopicFilter === t.id
-                  ? 'bg-blue-600 text-white font-medium shadow-xs'
+                !selectedTopicFilter
+                  ? 'bg-slate-900 text-white font-medium shadow-xs'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
               }`}
             >
-              {t.title}
+              All Infographics
             </button>
-          ))}
 
-          {isAdminMode && !showHeader && (
-            <button
-              onClick={() => setIsUploadModalOpen(true)}
-              className="ml-auto px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
-            >
-              <Upload className="w-3.5 h-3.5" />
-              <span>Muat Naik Poster</span>
-            </button>
+            {/* Topic buttons with Admin edit/delete/reorder support */}
+            {topics.map((t, idx) => {
+              const isSelected = selectedTopicFilter === t.id;
+              const isEditing = editingTopicId === t.id;
+
+              if (isEditing) {
+                return (
+                  <form
+                    key={t.id}
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleSaveEditTag(t.id);
+                    }}
+                    className="inline-flex items-center gap-1 bg-white border-2 border-blue-500 rounded-lg px-2 py-0.5 shadow-sm"
+                  >
+                    <input
+                      type="text"
+                      value={editingTopicTitle}
+                      onChange={(e) => setEditingTopicTitle(e.target.value)}
+                      placeholder="Nama tag..."
+                      className="text-xs text-slate-800 font-medium bg-transparent focus:outline-none w-28 py-0.5"
+                      autoFocus
+                    />
+                    <button
+                      type="submit"
+                      title="Simpan nama tag"
+                      className="p-1 hover:bg-emerald-50 text-emerald-600 rounded transition-colors cursor-pointer"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingTopicId(null)}
+                      title="Batal"
+                      className="p-1 hover:bg-slate-100 text-slate-400 rounded transition-colors cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </form>
+                );
+              }
+
+              return (
+                <div
+                  key={t.id}
+                  className={`inline-flex items-center rounded-lg border transition-all ${
+                    isSelected
+                      ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
+                      : 'bg-slate-100 border-slate-200 hover:bg-slate-200/90 text-slate-700'
+                  }`}
+                >
+                  {/* Left reorder (<) button in Admin Mode */}
+                  {isAdminMode && idx > 0 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleReorderTag(t.id, 'up');
+                      }}
+                      title="Susun ke kiri (<)"
+                      className={`p-1 pl-1.5 transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'text-blue-200 hover:text-white'
+                          : 'text-slate-400 hover:text-slate-800'
+                      }`}
+                    >
+                      <ChevronLeft className="w-3 h-3" />
+                    </button>
+                  )}
+
+                  {/* Main Tag Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedTopicFilter(isSelected ? null : t.id);
+                    }}
+                    className="px-2.5 py-1.5 font-medium whitespace-nowrap cursor-pointer flex items-center gap-1"
+                  >
+                    <span>{t.title}</span>
+                  </button>
+
+                  {/* Admin inline controls: Edit (pencil), Delete (trash), Reorder Right (>) */}
+                  {isAdminMode && (
+                    <div className="flex items-center pr-1 gap-0.5 border-l border-black/10 ml-0.5">
+                      {/* Edit Tag Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingTopicId(t.id);
+                          setEditingTopicTitle(t.title);
+                        }}
+                        title={`Edit / Tukar nama tag "${t.title}"`}
+                        className={`p-1 rounded transition-colors cursor-pointer ${
+                          isSelected
+                            ? 'hover:bg-blue-700 text-blue-100 hover:text-white'
+                            : 'hover:bg-slate-300 text-slate-500 hover:text-blue-600'
+                        }`}
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </button>
+
+                      {/* Delete Tag Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteTag(t.id, t.title);
+                        }}
+                        title={`Padam tag "${t.title}"`}
+                        className={`p-1 rounded transition-colors cursor-pointer ${
+                          isSelected
+                            ? 'hover:bg-red-600 text-blue-100 hover:text-white'
+                            : 'hover:bg-red-100 text-slate-400 hover:text-red-600'
+                        }`}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+
+                      {/* Right reorder (>) button */}
+                      {idx < topics.length - 1 && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReorderTag(t.id, 'down');
+                          }}
+                          title="Susun ke kanan (>)"
+                          className={`p-1 pr-1.5 transition-colors cursor-pointer ${
+                            isSelected
+                              ? 'text-blue-200 hover:text-white'
+                              : 'text-slate-400 hover:text-slate-800'
+                          }`}
+                        >
+                          <ChevronRight className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* + Tambah Tag Button in Admin Mode */}
+            {isAdminMode && (
+              <>
+                {isAddingTag ? (
+                  <form
+                    onSubmit={handleAddNewTag}
+                    className="inline-flex items-center gap-1.5 bg-white border-2 border-blue-600 rounded-lg px-2.5 py-1 shadow-sm"
+                  >
+                    <input
+                      type="text"
+                      value={newTagTitle}
+                      onChange={(e) => setNewTagTitle(e.target.value)}
+                      placeholder="Nama tag baru..."
+                      className="text-xs text-slate-800 font-medium bg-transparent focus:outline-none w-32"
+                      autoFocus
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newTagTitle.trim()}
+                      className="px-2 py-0.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded text-[11px] font-semibold cursor-pointer"
+                    >
+                      + Tambah
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingTag(false);
+                        setNewTagTitle('');
+                      }}
+                      className="p-1 hover:bg-slate-100 text-slate-400 rounded cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingTag(true)}
+                    className="px-2.5 py-1.5 rounded-lg border border-dashed border-blue-400 text-blue-600 hover:bg-blue-50 font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                    title="Tambah butang / tag topik baru"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Tambah Tag</span>
+                  </button>
+                )}
+              </>
+            )}
+
+            {/* Action buttons: Salin Link & Muat Naik Poster */}
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  copySectionDirectLink('infografik');
+                  setCopyNotice('Pautan terus Infografik & Poster (#infografik) berjaya disalin!');
+                  setTimeout(() => setCopyNotice(null), 2500);
+                }}
+                className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs flex items-center gap-1 transition-colors shadow-2xs cursor-pointer"
+                title="Salin pautan terus untuk bahagian ini (Slug: #infografik)"
+              >
+                <LinkIcon className="w-3.5 h-3.5 text-blue-600" />
+                <span className="hidden sm:inline">Salin Link</span>
+              </button>
+
+              {isAdminMode && !showHeader && (
+                <button
+                  type="button"
+                  onClick={() => setIsUploadModalOpen(true)}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Muat Naik Poster</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Admin Tag Management Helper Info */}
+          {isAdminMode && (
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 bg-blue-50/60 border border-blue-100 rounded-md px-2.5 py-1">
+              <Tag className="w-3 h-3 text-blue-600 shrink-0" />
+              <span>
+                <strong>Panduan Admin Tag:</strong> Klik <Edit2 className="w-2.5 h-2.5 inline text-blue-600 mx-0.5" /> untuk edit nama, <Trash2 className="w-2.5 h-2.5 inline text-red-500 mx-0.5" /> untuk padam, <ChevronLeft className="w-2.5 h-2.5 inline mx-0.5" /><ChevronRight className="w-2.5 h-2.5 inline mx-0.5" /> untuk susun butang ke kiri/kanan, atau klik <strong>+ Tambah Tag</strong> untuk tag baru.
+              </span>
+            </div>
           )}
         </div>
       )}

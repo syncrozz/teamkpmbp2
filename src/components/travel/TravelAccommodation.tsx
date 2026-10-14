@@ -12,6 +12,7 @@ import {
   AlertCircle,
   MessageCircle,
 } from 'lucide-react';
+import { SectionLinkButton } from '../common/SectionLinkButton';
 
 export const TravelAccommodation: React.FC = () => {
   const { travelInfo, updateTravelInfo } = useApp();
@@ -19,13 +20,17 @@ export const TravelAccommodation: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-          Logistics, Travel & Accommodation
-        </h2>
-        <p className="text-xs text-slate-500">
-          Convoy departure points, bus allocations, hostel check-in and emergency contacts
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+            Logistics, Travel & Accommodation
+          </h2>
+          <p className="text-xs text-slate-500">
+            Convoy departure points, bus allocations, hostel check-in and emergency contacts
+          </p>
+        </div>
+
+        <SectionLinkButton slug="penginapan" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

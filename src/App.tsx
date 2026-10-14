@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/layout/Header';
@@ -19,10 +19,87 @@ import { TravelAccommodation } from './components/travel/TravelAccommodation';
 import { DocumentList } from './components/documents/DocumentList';
 import { InlineEdit } from './components/common/InlineEdit';
 import { ChevronRight } from 'lucide-react';
+import {
+  SLUG_MAP,
+  SECTION_METADATA,
+  updatePageOGIMeta,
+  resolveSlug,
+  CanonicalSlug,
+} from './utils/slugRouting';
+import { SectionLinkButton } from './components/common/SectionLinkButton';
 
 const MainContent: React.FC = () => {
   const { isAdminMode } = useAuth();
-  const { activeTab, setActiveTab, settings, updateSettings } = useApp();
+  const { activeTab, setActiveTab, settings, updateSettings, infographics, announcements } = useApp();
+
+  // Listen to hash changes in browser URL (slug deep-linking & smooth scroll)
+  useEffect(() => {
+    const handleHash = () => {
+      const resolution = resolveSlug(window.location.hash);
+      if (resolution.tab !== activeTab) {
+        setActiveTab(resolution.tab);
+      }
+
+      // Smooth scroll to target if user specifically requested an anchor (e.g. #infografik)
+      if (resolution.scrollTargetId) {
+        setTimeout(() => {
+          const el = document.getElementById(resolution.scrollTargetId!);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 120);
+      }
+    };
+
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, [activeTab, setActiveTab]);
+
+  // Sync hash and dynamic OGI metadata when active tab changes
+  useEffect(() => {
+    const currentHash = window.location.hash.replace(/^#/, '').toLowerCase();
+    let targetSlug: CanonicalSlug = 'overview';
+
+    if (activeTab === 'home') {
+      targetSlug =
+        currentHash === 'infografik' || currentHash === 'infographics'
+          ? 'infografik'
+          : 'overview';
+    } else {
+      targetSlug = SLUG_MAP[activeTab] || 'overview';
+    }
+
+    if (window.location.hash !== `#${targetSlug}`) {
+      window.history.replaceState(null, '', `#${targetSlug}`);
+    }
+
+    // Determine representative image for OGI (Open Graph Image)
+    const publishedInfographics = infographics.filter(
+      (i) => i.status === 'published' && i.imageUrl
+    );
+    const fallbackImage =
+      publishedInfographics[0]?.imageUrl || infographics[0]?.imageUrl || null;
+
+    let representativeImage: string | null = null;
+    if (activeTab === 'home' || targetSlug === 'infografik') {
+      representativeImage = fallbackImage;
+    } else if (activeTab === 'announcements') {
+      const withImg = announcements.find((a) => a.status === 'published' && a.imageUrl);
+      representativeImage = withImg?.imageUrl || fallbackImage;
+    } else {
+      representativeImage = fallbackImage;
+    }
+
+    const meta = SECTION_METADATA[targetSlug] || SECTION_METADATA.overview;
+
+    updatePageOGIMeta({
+      title: `${meta.title} · ${settings.contingentName || 'SYNCROZZ KPMBP'}`,
+      description: meta.description,
+      imageUrl: representativeImage,
+      slug: targetSlug,
+    });
+  }, [activeTab, infographics, announcements, settings.contingentName]);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50/50 w-full max-w-full overflow-x-hidden">
@@ -40,7 +117,7 @@ const MainContent: React.FC = () => {
         {activeTab === 'home' && (
           <div className="space-y-10">
             {/* Primary Hero Section: Visual Guides & Infographics Showcase */}
-            <section className="space-y-4">
+            <section id="infografik" className="space-y-4 scroll-mt-20">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
@@ -72,6 +149,8 @@ const MainContent: React.FC = () => {
                     />
                   </div>
                 </div>
+
+                <SectionLinkButton slug="infografik" />
               </div>
 
               <InfographicGallery showHeader={false} />
@@ -148,15 +227,35 @@ const MainContent: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'announcements' && <AnnouncementList />}
+        {activeTab === 'announcements' && (
+          <section id="pengumuman" className="scroll-mt-20">
+            <AnnouncementList />
+          </section>
+        )}
 
-        {activeTab === 'schedule' && <ScheduleList />}
+        {activeTab === 'schedule' && (
+          <section id="jadual" className="scroll-mt-20">
+            <ScheduleList />
+          </section>
+        )}
 
-        {activeTab === 'travel' && <TravelAccommodation />}
+        {activeTab === 'travel' && (
+          <section id="penginapan" className="scroll-mt-20">
+            <TravelAccommodation />
+          </section>
+        )}
 
-        {activeTab === 'documents' && <DocumentList />}
+        {activeTab === 'documents' && (
+          <section id="dokumen" className="scroll-mt-20">
+            <DocumentList />
+          </section>
+        )}
 
-        {activeTab === 'topics' && <TopicSection />}
+        {activeTab === 'topics' && (
+          <section id="topik" className="scroll-mt-20">
+            <TopicSection />
+          </section>
+        )}
       </main>
 
       {/* Quiet, Clean Footer */}

@@ -18,6 +18,7 @@ import {
   Link as LinkIcon,
   CheckCircle,
 } from 'lucide-react';
+import { SectionLinkButton } from '../common/SectionLinkButton';
 
 export const DocumentList: React.FC = () => {
   const {
@@ -135,15 +136,19 @@ export const DocumentList: React.FC = () => {
           </p>
         </div>
 
-        {isAdminMode && (
-          <button
-            onClick={() => setIsAdding(true)}
-            className="min-h-[36px] px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 self-start transition-colors shadow-xs cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Document Record</span>
-          </button>
-        )}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <SectionLinkButton slug="dokumen" />
+
+          {isAdminMode && (
+            <button
+              onClick={() => setIsAdding(true)}
+              className="min-h-[34px] px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Document Record</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Add Document Form */}
