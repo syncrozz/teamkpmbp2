@@ -1,0 +1,73 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user has admin privileges
+    // Checks custom token claim or verified record in adminUsers collection
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        request.auth.token.email == 'cgkhairi2u@gmail.com' ||
+        exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid))
+      );
+    }
+    
+    // Public settings: anyone can read, only admin can write
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // Topics: public can read published topics, admin has full access
+    match /topics/{topicId} {
+      allow read: if resource.data.status == 'published' || isAdmin();
+      allow write: if isAdmin();
+    }
+    
+    // Subtopics: public can read published subtopics, admin has full access
+    match /subtopics/{subtopicId} {
+      allow read: if resource.data.status == 'published' || isAdmin();
+      allow write: if isAdmin();
+    }
+    
+    // Announcements: public can read published announcements, admin has full access
+    match /announcements/{announcementId} {
+      allow read: if resource.data.status == 'published' || isAdmin();
+      allow write: if isAdmin();
+    }
+    
+    // Events: public can read published events, admin has full access
+    match /events/{eventId} {
+      allow read: if resource.data.status == 'published' || isAdmin();
+      allow write: if isAdmin();
+    }
+    
+    // Schedules: public can read published schedule items, admin has full access
+    match /schedules/{scheduleId} {
+      allow read: if resource.data.status == 'published' || isAdmin();
+      allow write: if isAdmin();
+    }
+    
+    // Infographics: public can read published items, admin has full access
+    match /infographics/{infographicId} {
+      allow read: if resource.data.status == 'published' || isAdmin();
+      allow write: if isAdmin();
+    }
+    
+    // Documents: public can read published items, admin has full access
+    match /documents/{docId} {
+      allow read: if resource.data.status == 'published' || isAdmin();
+      allow write: if isAdmin();
+    }
+    
+    // Admin users allowlist: only admins can read or write
+    match /adminUsers/{userId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

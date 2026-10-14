@@ -1,0 +1,8 @@
+{
+  "name": "Contingent Hub",
+  "description": "Mobile-first public information portal for KPMBP participants attending SOAR IPMA 2026 with inline admin editing, dynamic topics, announcements, infographics, and schedules.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
