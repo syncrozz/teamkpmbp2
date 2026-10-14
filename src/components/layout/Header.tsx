@@ -40,13 +40,13 @@ export const Header: React.FC = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-8">
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 w-full max-w-full">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-6 min-w-0">
           
           {/* Zone 1: Central Platform Logo Integration */}
           <button
             onClick={() => setActiveTab('home')}
-            className="flex items-center text-left shrink-0 cursor-pointer focus:outline-none"
+            className="flex items-center text-left shrink-0 cursor-pointer focus:outline-none min-w-0"
             aria-label="Kembali ke Laman Utama"
           >
             <PlatformLogo />
@@ -129,17 +129,18 @@ export const Header: React.FC = () => {
           </nav>
 
           {/* Zone 3: PWA Install & Admin Mode Action */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <PWAInstallButton />
             {isAdminMode ? (
-              <div className="flex items-center gap-2">
-                <div className="min-h-[36px] px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs animate-in fade-in duration-150">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <div className="min-h-[32px] sm:min-h-[36px] px-2 sm:px-3 py-1 bg-emerald-600 text-white rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1.5 shadow-xs">
                   <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                  <span>🟢 Admin Mode Aktif</span>
+                  <span className="hidden sm:inline">Admin Mode</span>
+                  <span className="sm:hidden">Admin</span>
                 </div>
                 <button
                   onClick={exitAdminMode}
-                  className="min-h-[36px] px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 rounded-xl flex items-center gap-1 transition-colors cursor-pointer"
+                  className="min-h-[32px] sm:min-h-[36px] px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-medium text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 rounded-xl flex items-center gap-1 transition-colors cursor-pointer"
                   title="Keluar dari Mod Admin"
                 >
                   <LogOut className="w-3.5 h-3.5" />
@@ -149,10 +150,11 @@ export const Header: React.FC = () => {
             ) : (
               <button
                 onClick={() => setIsLoginModalOpen(true)}
-                className="min-h-[36px] px-3.5 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 hover:text-slate-900 border border-slate-200/80 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="min-h-[32px] sm:min-h-[36px] px-2.5 sm:px-3.5 py-1 text-[11px] sm:text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 hover:text-slate-900 border border-slate-200/80 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Shield className="w-3.5 h-3.5 text-slate-500" />
-                <span>Akses Mod Admin</span>
+                <span className="hidden sm:inline">Akses Mod Admin</span>
+                <span className="sm:hidden">Admin</span>
               </button>
             )}
           </div>

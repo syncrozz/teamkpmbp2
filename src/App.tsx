@@ -25,7 +25,7 @@ const MainContent: React.FC = () => {
   const { activeTab, setActiveTab, settings, updateSettings } = useApp();
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50/50">
+    <div className="min-h-screen flex flex-col bg-slate-50/50 w-full max-w-full overflow-x-hidden">
       {/* Admin Mode Bar when activated */}
       <AdminBar />
 
@@ -36,7 +36,7 @@ const MainContent: React.FC = () => {
       <HeroBanner />
 
       {/* Main View Area */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 pb-24 md:pb-12">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 pb-24 md:pb-12 min-w-0">
         {activeTab === 'home' && (
           <div className="space-y-10">
             {/* Primary Hero Section: Visual Guides & Infographics Showcase */}
@@ -160,7 +160,7 @@ const MainContent: React.FC = () => {
       </main>
 
       {/* Quiet, Clean Footer */}
-      <footer className="border-t border-slate-200 bg-white py-8 text-xs text-slate-500">
+      <footer className="border-t border-slate-200 bg-white py-8 text-xs text-slate-500 w-full max-w-full">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="space-y-1 text-center sm:text-left">
             <p className="font-semibold text-slate-800">
@@ -171,7 +171,7 @@ const MainContent: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-4 text-xs">
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-4 text-xs">
             <button
               onClick={() => setActiveTab('travel')}
               className="hover:text-slate-900 transition-colors"

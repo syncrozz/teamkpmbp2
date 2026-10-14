@@ -334,7 +334,7 @@ export const QuickAccess: React.FC = () => {
   return (
     <div className="py-6">
       {/* Header with Title and Admin Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-3.5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3.5">
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-bold text-slate-900 tracking-tight">
             Quick Access Portal
@@ -346,7 +346,7 @@ export const QuickAccess: React.FC = () => {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {isAdminMode && (
             <>
               <button

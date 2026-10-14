@@ -43,9 +43,9 @@ export const BottomNav: React.FC = () => {
       {/* Mobile Fixed Bottom Tab Bar */}
       <nav
         aria-label="Mobile Navigation"
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 pb-safe"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 pb-safe w-full max-w-full"
       >
-        <div className="grid grid-cols-5 items-center h-14">
+        <div className="grid grid-cols-5 items-center h-14 w-full max-w-full">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id && !isMoreOpen;
@@ -53,12 +53,12 @@ export const BottomNav: React.FC = () => {
               <button
                 key={item.id}
                 onClick={() => handleTabClick(item.id)}
-                className={`flex flex-col items-center justify-center min-h-[44px] min-w-[44px] py-1 transition-colors ${
+                className={`flex flex-col items-center justify-center min-h-[44px] min-w-0 w-full py-1 transition-colors cursor-pointer ${
                   isActive ? 'text-blue-600 font-semibold' : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
-                <span className="text-[10px] tracking-tight mt-0.5">{item.label}</span>
+                <span className="text-[10px] tracking-tight mt-0.5 truncate max-w-full px-1">{item.label}</span>
               </button>
             );
           })}
@@ -66,7 +66,7 @@ export const BottomNav: React.FC = () => {
           {/* More Menu Trigger */}
           <button
             onClick={() => setIsMoreOpen(true)}
-            className={`flex flex-col items-center justify-center min-h-[44px] min-w-[44px] py-1 transition-colors ${
+            className={`flex flex-col items-center justify-center min-h-[44px] min-w-0 w-full py-1 transition-colors cursor-pointer ${
               isMoreOpen || ['schedule', 'travel', 'documents', 'topics'].includes(activeTab)
                 ? 'text-blue-600 font-semibold'
                 : 'text-slate-500 hover:text-slate-900'
