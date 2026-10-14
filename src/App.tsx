@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/layout/Header';
@@ -32,11 +32,15 @@ const MainContent: React.FC = () => {
   const { isAdminMode } = useAuth();
   const { activeTab, setActiveTab, settings, updateSettings, infographics, announcements } = useApp();
 
+  // Ref to always access the latest activeTab without re-subscribing or looping
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+
   // Listen to hash changes in browser URL (slug deep-linking & smooth scroll)
   useEffect(() => {
     const handleHash = () => {
       const resolution = resolveSlug(window.location.hash);
-      if (resolution.tab !== activeTab) {
+      if (resolution.tab && resolution.tab !== activeTabRef.current) {
         setActiveTab(resolution.tab);
       }
 
@@ -47,14 +51,18 @@ const MainContent: React.FC = () => {
           if (el) {
             el.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
-        }, 120);
+        }, 150);
       }
     };
 
-    handleHash();
+    // Only inspect hash on initial mount if a hash is present in URL
+    if (window.location.hash) {
+      handleHash();
+    }
+
     window.addEventListener('hashchange', handleHash);
     return () => window.removeEventListener('hashchange', handleHash);
-  }, [activeTab, setActiveTab]);
+  }, [setActiveTab]);
 
   // Sync hash and dynamic OGI metadata when active tab changes
   useEffect(() => {

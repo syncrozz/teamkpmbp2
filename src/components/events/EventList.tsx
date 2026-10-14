@@ -431,9 +431,10 @@ export const EventList: React.FC = () => {
                               key={inf.id}
                               onClick={() => {
                                 setSelectedEventFilter(item.id);
-                                setActiveTab('infographics');
+                                setActiveTab('home');
+                                window.location.hash = 'infografik';
                               }}
-                              className="px-2 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded text-[10px] font-medium flex items-center gap-1"
+                              className="px-2 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded text-[10px] font-medium flex items-center gap-1 cursor-pointer"
                             >
                               <ImageIcon className="w-3 h-3" />
                               <span className="truncate max-w-[120px]">{inf.title}</span>
