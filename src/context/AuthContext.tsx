@@ -1,38 +1,26 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { UserProfile } from '../types';
-import { auth, isFirebaseConfigured } from '../lib/firebase';
-import {
-  signInWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-} from 'firebase/auth';
 
 interface AuthContextType {
   user: UserProfile | null;
   isAdmin: boolean;
   isAdminMode: boolean;
   setIsAdminMode: (active: boolean) => void;
+  verifyPin: (pin: string) => { success: boolean; error?: string };
+  exitAdminMode: () => void;
   login: (email: string, password?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   authorizedEmail: string;
 }
 
-const AUTHORIZED_ADMIN_EMAIL = 'cgkhairi2u@gmail.com';
+// Secret PIN for Admin Mode Authentication (Never expose in UI, console, or error messages)
+const ADMIN_PIN = '5313';
 const AUTH_STORAGE_KEY = 'syncrozz_kpmbp_auth';
 const ADMIN_MODE_KEY = 'syncrozz_kpmbp_admin_mode';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserProfile | null>(() => {
-    try {
-      const saved = localStorage.getItem(AUTH_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-
   const [isAdminMode, setIsAdminModeState] = useState<boolean>(() => {
     try {
       return localStorage.getItem(ADMIN_MODE_KEY) === 'true';
@@ -41,112 +29,86 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   });
 
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    try {
+      const saved = localStorage.getItem(AUTH_STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+      if (localStorage.getItem(ADMIN_MODE_KEY) === 'true') {
+        return {
+          uid: 'admin-kpmbp-leader',
+          email: 'admin@kpmbp.edu.my',
+          displayName: 'Pentadbir Kontinjen',
+          isAdmin: true,
+        };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  });
+
   const setIsAdminMode = (active: boolean) => {
     setIsAdminModeState(active);
     try {
       localStorage.setItem(ADMIN_MODE_KEY, active ? 'true' : 'false');
+      if (active) {
+        const adminProfile: UserProfile = {
+          uid: 'admin-kpmbp-leader',
+          email: 'admin@kpmbp.edu.my',
+          displayName: 'Pentadbir Kontinjen',
+          isAdmin: true,
+        };
+        setUser(adminProfile);
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(adminProfile));
+      } else {
+        setUser(null);
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+      }
     } catch (e) {
-      console.error(e);
+      console.error('Failed to update admin mode in storage:', e);
     }
   };
 
-  useEffect(() => {
-    if (isFirebaseConfigured && auth) {
-      const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-        if (firebaseUser) {
-          const isUserAdmin =
-            firebaseUser.email?.toLowerCase() === AUTHORIZED_ADMIN_EMAIL.toLowerCase();
-          const profile: UserProfile = {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email || '',
-            displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0],
-            isAdmin: isUserAdmin,
-          };
-          setUser(profile);
-          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(profile));
-        } else {
-          // If explicitly signed out in Firebase
-          const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-          if (stored) {
-            // Keep local session if preview mode
-          }
-        }
-      });
-      return () => unsubscribe();
-    }
-  }, []);
-
-  const login = async (email: string, password?: string): Promise<{ success: boolean; error?: string }> => {
-    const cleanEmail = email.trim().toLowerCase();
-    
-    // Check if Firebase is available and configured
-    if (isFirebaseConfigured && auth && password) {
-      try {
-        const cred = await signInWithEmailAndPassword(auth, cleanEmail, password);
-        const isUserAdmin = cred.user.email?.toLowerCase() === AUTHORIZED_ADMIN_EMAIL.toLowerCase();
-        const profile: UserProfile = {
-          uid: cred.user.uid,
-          email: cred.user.email || cleanEmail,
-          displayName: cred.user.displayName || 'Admin',
-          isAdmin: isUserAdmin,
-        };
-        setUser(profile);
-        setIsAdminMode(isUserAdmin);
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(profile));
-        return { success: true };
-      } catch (err: unknown) {
-        const error = err as { message?: string };
-        return { success: false, error: error.message || 'Firebase authentication failed.' };
-      }
-    }
-
-    // Phase A / Resilient Preview Mode authentication:
-    // Authorized administrative email matches cgkhairi2u@gmail.com
-    if (cleanEmail === AUTHORIZED_ADMIN_EMAIL.toLowerCase()) {
-      const profile: UserProfile = {
-        uid: 'admin-kpmbp-leader',
-        email: AUTHORIZED_ADMIN_EMAIL,
-        displayName: 'Cikgu Khairi (Contingent Lead)',
-        isAdmin: true,
-      };
-      setUser(profile);
+  /**
+   * Fast, keyboard-first PIN validation against 5313
+   */
+  const verifyPin = (inputPin: string): { success: boolean; error?: string } => {
+    const clean = inputPin.trim();
+    if (clean === ADMIN_PIN) {
       setIsAdminMode(true);
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(profile));
       return { success: true };
     }
-
     return {
       success: false,
-      error: `Email ${cleanEmail} is not registered in the administrator allowlist. Please use ${AUTHORIZED_ADMIN_EMAIL}`,
+      error: 'PIN keselamatan tidak sah. Sila cuba lagi.',
     };
   };
 
-  const logout = async () => {
-    if (isFirebaseConfigured && auth) {
-      try {
-        await firebaseSignOut(auth);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    setUser(null);
+  const exitAdminMode = () => {
     setIsAdminMode(false);
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    localStorage.removeItem(ADMIN_MODE_KEY);
   };
 
-  const isAdmin = Boolean(user?.isAdmin);
+  const login = async (_email: string, _password?: string): Promise<{ success: boolean; error?: string }> => {
+    setIsAdminMode(true);
+    return { success: true };
+  };
+
+  const logout = async (): Promise<void> => {
+    exitAdminMode();
+  };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        isAdmin,
-        isAdminMode: isAdmin && isAdminMode,
+        isAdmin: isAdminMode,
+        isAdminMode,
         setIsAdminMode,
+        verifyPin,
+        exitAdminMode,
         login,
         logout,
-        authorizedEmail: AUTHORIZED_ADMIN_EMAIL,
+        authorizedEmail: 'admin@kpmbp.edu.my',
       }}
     >
       {children}

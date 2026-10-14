@@ -21,7 +21,7 @@ import { AdminLoginModal } from '../admin/AdminLoginModal';
 
 export const BottomNav: React.FC = () => {
   const { activeTab, setActiveTab } = useApp();
-  const { isAdmin, isAdminMode, setIsAdminMode, user, logout } = useAuth();
+  const { isAdminMode, exitAdminMode } = useAuth();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
@@ -180,42 +180,29 @@ export const BottomNav: React.FC = () => {
 
             {/* Admin Management Section */}
             <div className="mt-4 pt-3 border-t border-slate-100">
-              {isAdmin ? (
-                <div className="bg-slate-50 p-3 rounded-xl">
-                  <div className="flex items-center justify-between mb-2">
+              {isAdminMode ? (
+                <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-xl space-y-3">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <ShieldCheck className="w-4 h-4 text-blue-600" />
-                      <span className="text-xs font-semibold text-slate-900">
-                        Admin Mode
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                      <span className="text-xs font-bold text-emerald-800">
+                        🟢 Admin Mode Aktif
                       </span>
                     </div>
-                    <span className="text-[11px] text-slate-500 truncate max-w-[150px]">
-                      {user?.email}
-                    </span>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    <button
-                      onClick={() => setIsAdminMode(!isAdminMode)}
-                      className={`h-9 px-3 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors ${
-                        isAdminMode
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-white border border-slate-200 text-slate-700'
-                      }`}
-                    >
-                      {isAdminMode ? 'Pencils Active' : 'Enable Pencil Editing'}
-                    </button>
-                    <button
-                      onClick={() => {
-                        logout();
-                        setIsMoreOpen(false);
-                      }}
-                      className="h-9 px-3 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg flex items-center justify-center gap-1.5"
-                    >
-                      <LogOut className="w-3.5 h-3.5" />
-                      Sign Out
-                    </button>
-                  </div>
+                  <p className="text-[11px] text-emerald-700 leading-tight">
+                    Tindakan pentadbiran dan ikon pensel kini boleh digunakan di seluruh portal.
+                  </p>
+                  <button
+                    onClick={() => {
+                      exitAdminMode();
+                      setIsMoreOpen(false);
+                    }}
+                    className="w-full h-9 px-3 text-xs font-semibold text-rose-700 bg-white border border-rose-200 hover:bg-rose-50 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Keluar Mod Admin</span>
+                  </button>
                 </div>
               ) : (
                 <button
@@ -223,10 +210,10 @@ export const BottomNav: React.FC = () => {
                     setIsMoreOpen(false);
                     setIsLoginModalOpen(true);
                   }}
-                  className="w-full h-11 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs rounded-xl flex items-center justify-center gap-2 transition-colors"
+                  className="w-full h-11 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
                   <Shield className="w-4 h-4 text-slate-600" />
-                  Administrator Sign In
+                  <span>Akses Mod Admin</span>
                 </button>
               )}
             </div>

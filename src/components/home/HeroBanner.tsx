@@ -85,18 +85,18 @@ export const HeroBanner: React.FC = () => {
               <InlineEdit
                 value={settings.contingentName}
                 onSave={(val) => updateSettings({ contingentName: val })}
-                as="h1"
+                as="span"
               />
             </h1>
 
             {/* Tagline */}
-            <div className="text-xs sm:text-sm text-slate-600">
+            <p className="text-xs sm:text-sm text-slate-600">
               <InlineEdit
                 value={settings.tagline}
                 onSave={(val) => updateSettings({ tagline: val })}
-                as="p"
+                as="span"
               />
-            </div>
+            </p>
           </div>
 
           {/* Quick Search */}

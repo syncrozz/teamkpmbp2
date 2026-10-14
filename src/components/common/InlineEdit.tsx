@@ -182,9 +182,25 @@ export const InlineEdit: React.FC<InlineEditProps> = ({
     );
   }
 
+  if (Component === 'span') {
+    return (
+      <span className={`inline-flex items-center gap-1.5 group relative ${className}`}>
+        <span>{value || placeholder}</span>
+        <button
+          type="button"
+          onClick={handleStartEdit}
+          title="Edit inline"
+          className="opacity-75 group-hover:opacity-100 min-h-[32px] min-w-[32px] p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-all shrink-0 inline-flex items-center justify-center"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+      </span>
+    );
+  }
+
   return (
-    <span className="inline-flex items-center gap-1.5 group relative">
-      <Component className={className}>{value || placeholder}</Component>
+    <Component className={`inline-flex items-center gap-1.5 group relative ${className}`}>
+      <span>{value || placeholder}</span>
       <button
         type="button"
         onClick={handleStartEdit}
@@ -193,6 +209,6 @@ export const InlineEdit: React.FC<InlineEditProps> = ({
       >
         <Pencil className="w-3.5 h-3.5" />
       </button>
-    </span>
+    </Component>
   );
 };

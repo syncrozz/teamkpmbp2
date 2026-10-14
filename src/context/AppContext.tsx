@@ -22,7 +22,8 @@ import {
   initialTopics,
   initialTravelInfo,
 } from '../data/initialData';
-import { db, isFirebaseConfigured } from '../lib/firebase';
+import { db, isFirebaseConfigured, auth } from '../lib/firebase';
+import { useAuth } from './AuthContext';
 import {
   doc,
   setDoc,
@@ -176,53 +177,87 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     travelInfo,
   ]);
 
-  // Connect to Firestore real-time listeners if configured
+  const { user } = useAuth();
+
+  // Connect to Firestore real-time listeners if configured and auth is present
   useEffect(() => {
-    if (!isFirebaseConfigured || !db) return;
+    // Only attach live snapshot listeners if auth is ready and user is authenticated
+    if (!isFirebaseConfigured || !db || !auth?.currentUser) return;
+
+    let unsubTopics: (() => void) | undefined;
+    let unsubSubtopics: (() => void) | undefined;
+    let unsubAnn: (() => void) | undefined;
+    let unsubEvents: (() => void) | undefined;
 
     try {
-      const unsubTopics = onSnapshot(collection(db, 'topics'), (snapshot) => {
-        if (!snapshot.empty) {
-          const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Topic));
-          setTopics(list.sort((a, b) => a.displayOrder - b.displayOrder));
+      unsubTopics = onSnapshot(
+        collection(db, 'topics'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Topic));
+            setTopics(list.sort((a, b) => a.displayOrder - b.displayOrder));
+          }
+        },
+        (error) => {
+          console.warn('[Firestore] topics snapshot listener error:', error.message);
         }
-      });
+      );
 
-      const unsubSubtopics = onSnapshot(collection(db, 'subtopics'), (snapshot) => {
-        if (!snapshot.empty) {
-          const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Subtopic));
-          setSubtopics(list.sort((a, b) => a.displayOrder - b.displayOrder));
+      unsubSubtopics = onSnapshot(
+        collection(db, 'subtopics'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Subtopic));
+            setSubtopics(list.sort((a, b) => a.displayOrder - b.displayOrder));
+          }
+        },
+        (error) => {
+          console.warn('[Firestore] subtopics snapshot listener error:', error.message);
         }
-      });
+      );
 
-      const unsubAnn = onSnapshot(collection(db, 'announcements'), (snapshot) => {
-        if (!snapshot.empty) {
-          const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Announcement));
-          setAnnouncements(list.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()));
+      unsubAnn = onSnapshot(
+        collection(db, 'announcements'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Announcement));
+            setAnnouncements(
+              list.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+            );
+          }
+        },
+        (error) => {
+          console.warn('[Firestore] announcements snapshot listener error:', error.message);
         }
-      });
+      );
 
-      const unsubEvents = onSnapshot(collection(db, 'events'), (snapshot) => {
-        if (!snapshot.empty) {
-          const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as EventItem));
-          setEvents(list.sort((a, b) => a.displayOrder - b.displayOrder));
+      unsubEvents = onSnapshot(
+        collection(db, 'events'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as EventItem));
+            setEvents(list.sort((a, b) => a.displayOrder - b.displayOrder));
+          }
+        },
+        (error) => {
+          console.warn('[Firestore] events snapshot listener error:', error.message);
         }
-      });
-
-      return () => {
-        unsubTopics();
-        unsubSubtopics();
-        unsubAnn();
-        unsubEvents();
-      };
+      );
     } catch (e) {
-      console.warn('Firestore snapshot error:', e);
+      console.warn('Firestore snapshot setup error:', e);
     }
-  }, []);
 
-  // Sync item to Firestore if configured
+    return () => {
+      unsubTopics?.();
+      unsubSubtopics?.();
+      unsubAnn?.();
+      unsubEvents?.();
+    };
+  }, [user]);
+
+  // Sync item to Firestore if configured and authenticated
   const syncToFirestore = async (collectionName: string, id: string, data: Record<string, unknown>) => {
-    if (isFirebaseConfigured && db) {
+    if (isFirebaseConfigured && db && auth?.currentUser) {
       try {
         await setDoc(doc(db, collectionName, id), data, { merge: true });
       } catch (err) {
@@ -232,7 +267,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteFromFirestore = async (collectionName: string, id: string) => {
-    if (isFirebaseConfigured && db) {
+    if (isFirebaseConfigured && db && auth?.currentUser) {
       try {
         await deleteDoc(doc(db, collectionName, id));
       } catch (err) {
